@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿// Author: Jonas De Maeseneer
+
+using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Entities;
 

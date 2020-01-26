@@ -1,4 +1,6 @@
-﻿using Unity.Entities;
+﻿// Author: Jonas De Maeseneer
+
+using Unity.Entities;
 using Unity.Jobs;
 using Unity.Scenes;
 

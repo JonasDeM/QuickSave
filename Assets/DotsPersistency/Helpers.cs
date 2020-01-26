@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+﻿// Author: Jonas De Maeseneer
+
+using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Transforms;
 using UnityEngine;
 
-[assembly:InternalsVisibleTo("io.jonasdem.dotspersistency")]
 namespace DotsPersistency
 {
     public static unsafe class EntitiesExtensions

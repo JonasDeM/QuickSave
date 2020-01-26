@@ -1,4 +1,6 @@
-﻿using System;
+﻿// Author: Jonas De Maeseneer
+
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
