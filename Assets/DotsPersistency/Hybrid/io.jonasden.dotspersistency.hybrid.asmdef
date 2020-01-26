@@ -1,0 +1,20 @@
+{
+    "name": "io.jonasden.dotspersistency.hybrid",
+    "references": [
+        "io.jonasdem.dotspersistency",
+        "Unity.Entities.Hybrid",
+        "Unity.Entities",
+        "Unity.Collections",
+        "Unity.Transforms",
+        "Unity.Scenes.Hybrid"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
