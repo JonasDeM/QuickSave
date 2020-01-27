@@ -1,0 +1,22 @@
+{
+    "name": "io.jonasden.dotspersistency.editor",
+    "references": [
+        "io.jonasdem.dotspersistency",
+        "io.jonasden.dotspersistency.hybrid",
+        "Unity.Entities",
+        "Unity.Entities.Hybrid",
+        "Unity.Collections",
+        "Unity.Entities.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
