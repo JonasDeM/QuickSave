@@ -506,6 +506,40 @@ namespace Unity.Entities
                     cmd->Header.Header.CommandType = (int) ECBCommand.SetComponentWithEntityFixUp;
             }
         }
+        
+        internal void AddEntityComponentCommand(EntityCommandBufferChain* chain, int jobIndex, ECBCommand op, Entity e, ComponentType cType, int typeSize, NativeArray<byte> byteArray)
+        {
+            if (cType.IsZeroSized)
+            {
+                AddEntityComponentTypeCommand(chain, jobIndex, op, e, cType);
+                return;
+            }
+
+            // NOTE: This has to be sizeof not TypeManager.SizeInChunk since we use UnsafeUtility.CopyStructureToPtr
+            //       even on zero size components.
+            var sizeNeeded = EntityCommandBufferData.Align(sizeof(EntityComponentCommand) + typeSize, 8);
+
+            ResetCommandBatching(chain);
+            var cmd = (EntityComponentCommand*)Reserve(chain, jobIndex, sizeNeeded);
+
+            cmd->Header.Header.CommandType = (int)op;
+            cmd->Header.Header.TotalSize = sizeNeeded;
+            cmd->Header.Header.SortIndex = chain->m_LastSortIndex;
+            cmd->Header.Entity = e;
+            cmd->ComponentTypeIndex = cType.TypeIndex;
+            cmd->ComponentSize = typeSize;
+
+            byte* data = (byte*) (cmd + 1);
+            UnsafeUtility.MemCpy(data, byteArray.GetUnsafeReadOnlyPtr(), typeSize);
+
+            if (RequiresEntityFixUp(data, cType.TypeIndex))
+            {
+                if (op == ECBCommand.AddComponent)
+                    cmd->Header.Header.CommandType = (int) ECBCommand.AddComponentWithEntityFixUp;
+                else if (op == ECBCommand.SetComponent)
+                    cmd->Header.Header.CommandType = (int) ECBCommand.SetComponentWithEntityFixUp;
+            }
+        }
 
         internal BufferHeader* AddEntityBufferCommand<T>(EntityCommandBufferChain* chain, int jobIndex, ECBCommand op,
             Entity e, out int internalCapacity) where T : struct, IBufferElementData
@@ -1858,6 +1892,13 @@ namespace Unity.Entities
                 CheckWriteAccess();
                 var chain = ThreadChain;
                 m_Data->AddEntityComponentCommand(chain, jobIndex, ECBCommand.SetComponent, e, component);
+            }
+            
+            public void SetComponent(int jobIndex, Entity e, ComponentType cType, int typeSize, NativeArray<byte> byteArray)
+            {
+                CheckWriteAccess();
+                var chain = ThreadChain;
+                m_Data->AddEntityComponentCommand(chain, jobIndex, ECBCommand.SetComponent, e, cType, typeSize, byteArray);
             }
 
             public void RemoveComponent<T>(int jobIndex, Entity e)

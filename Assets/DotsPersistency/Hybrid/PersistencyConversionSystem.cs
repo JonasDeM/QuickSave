@@ -1,8 +1,10 @@
 ﻿// Author: Jonas De Maeseneer
 
+using System;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace DotsPersistency.Hybrid
 {
@@ -12,24 +14,26 @@ namespace DotsPersistency.Hybrid
     {
         protected override void OnUpdate()
         {
+            int amount = 0;
             Entities.ForEach((PersistencyAuthoring persistencyAuthoring)
                 =>
             {
                 Entity e = GetPrimaryEntity(persistencyAuthoring);
 
-                FixedList64<ulong> list = new FixedList64<ulong>
-                {
-                    TypeManager.GetTypeInfo(ComponentType.ReadWrite<Translation>().TypeIndex).StableTypeHash
-                };
+                FixedList64<ulong> list = persistencyAuthoring.GetFixedTypesToPersistHashes();
                 
                 var componentsToPersist = new PersistentComponents() { TypeHashList = list };
                 DstEntityManager.AddSharedComponentData(e, componentsToPersist);
                 
                 DstEntityManager.AddComponentData(e, new PersistenceState()
                 {
-                    ArrayIndex = persistencyAuthoring.ArrayIndex
+                    ArrayIndex = persistencyAuthoring.CalculateArrayIndex()
                 });
+
+                amount++;
             });
+            
+            Debug.Log("Amount persisted entities: " + amount + "\nLast converted: " + DateTime.Now);
         }
     }
 }

@@ -4,15 +4,12 @@ using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
-using Unity.Transforms;
-using UnityEngine;
 
 namespace DotsPersistency
 {
     public static unsafe class EntitiesExtensions
     {
-        public static byte* GetComponentDataAsBytePtr(this ArchetypeChunk archetypeChunk, ArchetypeChunkComponentTypeDynamic chunkComponentType
-            , out int typeSize, out int byteLen)
+        public static NativeArray<byte> GetComponentDataAsByteArray(this ArchetypeChunk archetypeChunk, ArchetypeChunkComponentTypeDynamic chunkComponentType)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             if (chunkComponentType.m_IsZeroSized)
@@ -20,54 +17,125 @@ namespace DotsPersistency
 
             AtomicSafetyHandle.CheckReadAndThrow(chunkComponentType.m_Safety);
 #endif
-            var m_Chunk = archetypeChunk.m_Chunk;
+            var chunk = archetypeChunk.m_Chunk;
             
-            var archetype = m_Chunk->Archetype;
-            ChunkDataUtility.GetIndexInTypeArray(m_Chunk->Archetype, chunkComponentType.m_TypeIndex, ref chunkComponentType.m_TypeLookupCache);
+            var archetype = chunk->Archetype;
+            ChunkDataUtility.GetIndexInTypeArray(chunk->Archetype, chunkComponentType.m_TypeIndex, ref chunkComponentType.m_TypeLookupCache);
             var typeIndexInArchetype = chunkComponentType.m_TypeLookupCache;
             if (typeIndexInArchetype == -1)
             {
-                byteLen = 0;
-                typeSize = 0;
-                return (byte*) 0;
+                var emptyResult = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<byte>(null, 0, 0);
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref emptyResult, chunkComponentType.m_Safety);
+#endif
+                return emptyResult;
             }
 
-            typeSize = archetype->SizeOfs[typeIndexInArchetype];
-            var length = m_Chunk->Count;
-            byteLen = length * typeSize;
+            int typeSize = archetype->SizeOfs[typeIndexInArchetype];
+            var length = chunk->Count;
+            int byteLen = length * typeSize;
             
-            var buffer = m_Chunk->Buffer;
+            var buffer = chunk->Buffer;
             var startOffset = archetype->Offsets[typeIndexInArchetype];
-            
+            var result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<byte>(buffer + startOffset, byteLen, Allocator.None);
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref result, chunkComponentType.m_Safety);
+#endif
             if (!chunkComponentType.IsReadOnly)
-                m_Chunk->SetChangeVersion(typeIndexInArchetype, chunkComponentType.GlobalSystemVersion);
-            return buffer + startOffset;
+                chunk->SetChangeVersion(typeIndexInArchetype, chunkComponentType.GlobalSystemVersion);
+            return result;
         }
-        
     }
     
     public unsafe struct CopyComponentDataToByteArray : IJobChunk
     {
-        [NativeDisableParallelForRestriction]
-        [ReadOnly] public ArchetypeChunkComponentTypeDynamic ChunkComponentType;
-        [ReadOnly] public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
-        [NativeDisableParallelForRestriction]
-        public NativeArray<byte> Output;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public ArchetypeChunkComponentTypeDynamic ChunkComponentType;
+        public int TypeSize;
+        [ReadOnly] 
+        public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
+        [WriteOnly, NativeDisableParallelForRestriction]
+        public NativeArray<byte> OutputData;
+        [WriteOnly, NativeDisableParallelForRestriction]
+        public NativeArray<bool> OutputFound;
             
         public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
         {
-            var ptr = chunk.GetComponentDataAsBytePtr(ChunkComponentType, out int typeSize, out int byteLen);
+            var byteArray = chunk.GetComponentDataAsByteArray(ChunkComponentType);
             var persistenceStateArray = chunk.GetNativeArray(PersistenceStateType);
             for (int i = 0; i < persistenceStateArray.Length; i++)
             {
                 PersistenceState persistenceState = persistenceStateArray[i];
-                int outputByteIndex = persistenceState.ArrayIndex * typeSize;
-                int compDataByteIndex = i * typeSize;
+                int outputByteIndex = persistenceState.ArrayIndex * TypeSize;
+                int compDataByteIndex = i * TypeSize;
 
-                var value1 = UnsafeUtility.ReadArrayElement<Translation>(ptr, i).Value;
-                UnsafeUtility.MemCpy((byte*)Output.GetUnsafePtr() + outputByteIndex, ptr + compDataByteIndex, typeSize);
-                var value2 = UnsafeUtility.ReadArrayElement<Translation>((byte*)Output.GetUnsafeReadOnlyPtr(), persistenceState.ArrayIndex).Value;
+                //var value1 = UnsafeUtility.ReadArrayElement<Translation>(ptr, i).Value;
+                UnsafeUtility.MemCpy((byte*)OutputData.GetUnsafePtr() + outputByteIndex, (byte*)byteArray.GetUnsafeReadOnlyPtr() + compDataByteIndex, TypeSize);
+                OutputFound[persistenceState.ArrayIndex] = true;
+                //var value2 = UnsafeUtility.ReadArrayElement<Translation>((byte*)OutputData.GetUnsafeReadOnlyPtr(), persistenceState.ArrayIndex).Value;
                 //Debug.Log(persistenceState.ArrayIndex + " - " + value1 + " - " + value2);
+            }
+        }
+    }
+
+    public struct FindTagComponentsOnPersistentEntities : IJobForEach<PersistenceState>
+    {
+        [WriteOnly, NativeDisableParallelForRestriction]
+        public NativeArray<bool> OutputFound;
+
+        public void Execute([ReadOnly] ref PersistenceState persistenceState)
+        {
+            OutputFound[persistenceState.ArrayIndex] = true;
+        }
+    }
+    
+    public unsafe struct AddMissingComponents : IJobChunk
+    {        
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public ArchetypeChunkEntityType EntityType;
+        [ReadOnly] 
+        public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
+        public EntityCommandBuffer.Concurrent Ecb;
+        public ComponentType ComponentType;
+        public int TypeSize;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<byte> InputData;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<bool> InputFound;
+            
+        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
+        {
+            var entityArray = chunk.GetNativeArray(EntityType);
+            var persistenceStateArray = chunk.GetNativeArray(PersistenceStateType);
+            for (int i = 0; i < entityArray.Length; i++)
+            {
+                PersistenceState persistenceState = persistenceStateArray[i];
+                int inputByteIndex = persistenceState.ArrayIndex * TypeSize;
+
+                if (InputFound[persistenceState.ArrayIndex])
+                {
+                    Ecb.AddComponent(chunkIndex, entityArray[i], ComponentType); 
+                    if (TypeSize != 0) // todo optimization do check when scheduling & schedule different job that only Adds
+                    {
+                        Ecb.SetComponent(chunkIndex, entityArray[i], ComponentType, TypeSize, NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<byte>((byte*)InputData.GetUnsafeReadOnlyPtr() + inputByteIndex, TypeSize, Allocator.None));
+                    }
+                }
+            }
+        }
+    }
+    
+    public struct RemoveComponents : IJobForEachWithEntity<PersistenceState>
+    {        
+        public EntityCommandBuffer.Concurrent Ecb;
+        public ComponentType ComponentType;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<bool> InputFound;
+        
+        public void Execute(Entity entity, int index, [ReadOnly] ref PersistenceState persistenceState)
+        {
+            if (!InputFound[persistenceState.ArrayIndex])
+            {
+                Ecb.RemoveComponent(index, entity, ComponentType);
             }
         }
     }
@@ -76,6 +144,7 @@ namespace DotsPersistency
     {
         [NativeDisableContainerSafetyRestriction]
         public ArchetypeChunkComponentTypeDynamic ChunkComponentType;
+        public int TypeSize;
         [ReadOnly] 
         public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
         [ReadOnly]
@@ -83,19 +152,19 @@ namespace DotsPersistency
             
         public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
         {
-            var ptr = chunk.GetComponentDataAsBytePtr(ChunkComponentType, out int typeSize, out int byteLen);
+            var byteArray = chunk.GetComponentDataAsByteArray(ChunkComponentType);
             var persistenceStateArray = chunk.GetNativeArray(PersistenceStateType);
             
             for (int i = 0; i < persistenceStateArray.Length; i++)
             {
                 PersistenceState persistenceState = persistenceStateArray[i];
-                int inputByteIndex = persistenceState.ArrayIndex * typeSize;
-                int compDataByteIndex = i * typeSize;
+                int inputByteIndex = persistenceState.ArrayIndex * TypeSize;
+                int compDataByteIndex = i * TypeSize;
 
-                var value1 = UnsafeUtility.ReadArrayElement<Translation>((byte*)Input.GetUnsafeReadOnlyPtr(), persistenceState.ArrayIndex).Value;
-                UnsafeUtility.MemCpy(ptr + compDataByteIndex, (byte*)Input.GetUnsafeReadOnlyPtr() + inputByteIndex, typeSize);
-                var value2 = UnsafeUtility.ReadArrayElement<Translation>(ptr, i).Value;
-                Debug.Log(persistenceState.ArrayIndex + " - " + value1 + " - " + value2);
+                //var value1 = UnsafeUtility.ReadArrayElement<Translation>((byte*)Input.GetUnsafeReadOnlyPtr(), persistenceState.ArrayIndex).Value;
+                UnsafeUtility.MemCpy((byte*)byteArray.GetUnsafePtr() + compDataByteIndex, (byte*)Input.GetUnsafeReadOnlyPtr() + inputByteIndex, TypeSize);
+                //var value2 = UnsafeUtility.ReadArrayElement<Translation>(ptr, i).Value;
+                //Debug.Log(persistenceState.ArrayIndex + " - " + value1 + " - " + value2);
             }
         }
     }

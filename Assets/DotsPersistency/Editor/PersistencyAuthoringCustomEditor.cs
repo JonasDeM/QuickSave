@@ -18,7 +18,9 @@ namespace DotsPersistency.Editor
         [Serializable]
         struct AssemblyName
         {
+#pragma warning disable CS0649
             public string name;
+#pragma warning restore CS0649
         }
 
         private void OnEnable()
@@ -32,8 +34,12 @@ namespace DotsPersistency.Editor
                 {
                     try
                     {
-                        type = Assembly.Load(JsonUtility.FromJson<AssemblyName>(assemblyDefAsset.text).name).GetType(fullTypeName);
-                        break;
+                        var assembly = Assembly.Load(JsonUtility.FromJson<AssemblyName>(assemblyDefAsset.text).name);
+                        type = assembly.GetType(fullTypeName);
+                        if (type != null)
+                        {
+                            break;
+                        }
                     }
                     catch (Exception e)
                     {
@@ -54,7 +60,7 @@ namespace DotsPersistency.Editor
         public override void OnInspectorGUI()
         {
             var singleTarget = ((PersistencyAuthoring) target);
-            string index = singleTarget.ArrayIndex.ToString();
+            string index = singleTarget.CalculateArrayIndex().ToString();
             string hashAmount = singleTarget.TypesToPersistHashes.Count.ToString();
             if (targets.Length != 1)
             {
