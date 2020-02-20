@@ -32,11 +32,12 @@ namespace DotsPersistency
                 var jobhandle =  Entities.WithAll<PersistenceState>().ForEach((Entity entity, int entityInQueryIndex) =>
                 {
                     ecb.AddComponent<Disabled>(entityInQueryIndex, entity);
+                    ecb.DestroyEntity(entityInQueryIndex, entity);
                 }).Schedule(inputDependencies);
                 ecbSystem.AddJobHandleForProducer(jobhandle);
                 return jobhandle;
             }
-
+            
             return inputDependencies;
         }
     }
