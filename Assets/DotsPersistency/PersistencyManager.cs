@@ -7,8 +7,10 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Transforms;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DotsPersistency
 {
@@ -17,12 +19,13 @@ namespace DotsPersistency
         [Serializable]
         public struct PersistentDataStorageKey : IComponentData
         {
-            public PersistentComponents PersistentComponents;
+            [FormerlySerializedAs("PersistentComponents")] public PersistedTypes persistedTypes;
             public SceneSection SceneSection;
         }
     
         // Todo optimization make this an array to index in
         private Dictionary<PersistentDataStorageKey, PersistentDataStorage> PersistentData = new Dictionary<PersistentDataStorageKey, PersistentDataStorage>(10);
+        
         internal ulong PersistenceStateStableTypeHash;
         
         public PersistencyManager()
@@ -33,39 +36,41 @@ namespace DotsPersistency
         public JobHandle ScheduleFromPersistentDataJobs(ComponentSystemBase system, EntityCommandBufferSystem ecbSystem, JobHandle inputDeps)
         {            
             // get all the type combinations that were once persisted
-            var persistentComponentsList = PersistentData.Keys.Select(key => key.PersistentComponents).Distinct();
+            var persistentComponentsList = PersistentData.Keys.Select(key => key.persistedTypes).Distinct();
             List<SceneSection> sceneSectionList = new List<SceneSection>();
-            // only read from persistent data for scene sections currently loaded (bug what if there is an empty scene section? I will need to get all loaded scenesections in another manner)
+            // only read from persistent data for scene sections currently loaded
+            // (bug what if there is an empty scene section? I will need to get all loaded scenesections in another manner)
             system.EntityManager.GetAllUniqueSharedComponentData(sceneSectionList);
             JobHandle mainJobHandle = inputDeps;
             JobHandle ecbJobHandle = inputDeps;
-
+            
             foreach (var persistentComponents in persistentComponentsList)
             {
-                if (persistentComponents.TypeHashList.Length < 1)
+                if (persistentComponents.ComponentDataTypeHashList.Length < 1)
                     continue;
 
                 foreach (var sceneSection in sceneSectionList)
                 {
                     var key = new PersistentDataStorageKey
                     {
-                        PersistentComponents = persistentComponents,
+                        persistedTypes = persistentComponents,
                         SceneSection = sceneSection
                     };
 
                     if (PersistentData.TryGetValue(key, out var persistentDataStorage))
                     {
-                        for (int i = 0; i < persistentComponents.TypeHashList.Length; i++)
+                        for (int i = 0; i < persistentComponents.ComponentDataTypeHashList.Length; i++)
                         {
-                            ulong stableTypeHash = persistentComponents.TypeHashList[i];
-                            var typeIndex = TypeManager.GetTypeIndexFromStableTypeHash(persistentComponents.TypeHashList[i]);
+                            ulong stableTypeHash = persistentComponents.ComponentDataTypeHashList[i];
+                            var typeIndex = TypeManager.GetTypeIndexFromStableTypeHash(stableTypeHash);
                             var runtimeType = ComponentType.FromTypeIndex(typeIndex);
+                            var typeInfo = TypeManager.GetTypeInfo(typeIndex);
                             
                             var query = CreatePersistenceEntityQuery(system, runtimeType);
                             query.SetSharedComponentFilter(persistentComponents, sceneSection);
                             
                             var dataAndFound = persistentDataStorage.GetDataAndFoundArrays(stableTypeHash);
-                            var elementSize = TypeManager.GetTypeInfo(typeIndex).ElementSize;
+                            var elementSize = typeInfo.ElementSize;
 
                             if (elementSize != 0)
                             {
@@ -90,7 +95,7 @@ namespace DotsPersistency
                             ecbJobHandle = JobHandle.CombineDependencies(ecbJobHandle, new AddMissingComponents()
                             {
                                 EntityType = system.GetArchetypeChunkEntityType(),
-                                PersistenceStateType = system.GetArchetypeChunkComponentType<PersistenceState>(),
+                                PersistenceStateType = system.GetArchetypeChunkComponentType<PersistenceState>(true),
                                 Ecb = ecbSystem.CreateCommandBuffer().ToConcurrent(),
                                 ComponentType = runtimeType,
                                 InputFound = dataAndFound.Found,
@@ -98,6 +103,31 @@ namespace DotsPersistency
                             }.Schedule(query, inputDeps));
                         }
                         
+                        for (int i = 0; i < persistentComponents.BufferElementTypeHashList.Length; i++)
+                        {
+                            ulong stableTypeHash = persistentComponents.BufferElementTypeHashList[i];
+                            var typeIndex = TypeManager.GetTypeIndexFromStableTypeHash(stableTypeHash);
+                            var runtimeType = ComponentType.FromTypeIndex(typeIndex); // read/write
+                            var typeInfo = TypeManager.GetTypeInfo(typeIndex);
+                            
+                            var query = CreatePersistenceEntityQuery(system, runtimeType);
+                            query.SetSharedComponentFilter(persistentComponents, sceneSection);
+                            
+                            var dataAndFound = persistentDataStorage.GetDataAndFoundArrays(stableTypeHash);
+                            var elementSize = typeInfo.ElementSize;
+
+                            mainJobHandle = JobHandle.CombineDependencies(mainJobHandle, new CopyByteArrayToBufferElements()
+                            {
+                                ArchetypeChunkBufferDataTypeDynamic = system.GetArchetypeChunkBufferTypeDynamic(runtimeType),
+                                ElementSize = elementSize,
+                                MaxElements = typeInfo.BufferCapacity, 
+                                PersistenceStateType = system.GetArchetypeChunkComponentType<PersistenceState>(true),
+                                InputData = dataAndFound.Data,
+                                AmountPersisted = dataAndFound.GetFoundAmountForBuffers()
+                            }.Schedule(query, inputDeps));
+                        }
+                        
+#if DOTS_PERSISTENCY_ENABLE_DESTROY_AND_CREATE
                         var allPersistedEntitiesQuery = CreatePersistenceEntityQuery(system);
                         allPersistedEntitiesQuery.SetSharedComponentFilter(persistentComponents, sceneSection);
                         
@@ -137,8 +167,8 @@ namespace DotsPersistency
                             createEntitiesJob.ComponentTypesSizes[index] = TypeManager.GetTypeInfo(typeIndex).ElementSize;
                         }
 
-                        Debug.Log($"{sceneSection.SceneGUID} - {persistentComponents.TypeHashList.Length}: " + persistentDataStorage.GetAmount());
                         ecbJobHandle = JobHandle.CombineDependencies(ecbJobHandle, createEntitiesJob.Schedule(persistentDataStorage.GetAmount(), 8, getCompData));
+#endif
                     }
                 }
             }
@@ -156,7 +186,7 @@ namespace DotsPersistency
             }
             PersistentData.Clear();
             
-            List<PersistentComponents> persistentComponentsList = new List<PersistentComponents>();
+            List<PersistedTypes> persistentComponentsList = new List<PersistedTypes>();
             system.EntityManager.GetAllUniqueSharedComponentData(persistentComponentsList);
             List<SceneSection> sceneSectionList = new List<SceneSection>();
             system.EntityManager.GetAllUniqueSharedComponentData(sceneSectionList);
@@ -164,14 +194,14 @@ namespace DotsPersistency
             
             foreach (var persistentComponents in persistentComponentsList)
             {           
-                if (persistentComponents.TypeHashList.Length < 1)
+                if (persistentComponents.ComponentDataTypeHashList.Length < 1)
                     continue;
 
                 foreach (var sceneSection in sceneSectionList)
                 {
                     var key = new PersistentDataStorageKey
                     {
-                        PersistentComponents = persistentComponents,
+                        persistedTypes = persistentComponents,
                         SceneSection = sceneSection
                     };
 
@@ -179,18 +209,29 @@ namespace DotsPersistency
                     {
                         var query = CreatePersistenceEntityQuery(system);
                         query.SetSharedComponentFilter(persistentComponents, sceneSection);
-                        var typeHashList = persistentComponents.TypeHashList;
-                        typeHashList.Add(PersistenceStateStableTypeHash);
-                        var storage = new PersistentDataStorage(query.CalculateEntityCount(), typeHashList);
+                        var compDataTypeHashList = persistentComponents.ComponentDataTypeHashList.ToArray();
+                        var bufferDataTypeHashList = persistentComponents.BufferElementTypeHashList.ToArray();
+#if DOTS_PERSISTENCY_ENABLE_DESTROY_AND_CREATE
+                        // todo if creation & destruction is supported then the highest PersistenceState arrayindex needs to be passed in as size
+                        throw new NotImplementedException("The define DOTS_PERSISTENCY_ENABLE_DESTROY_AND_CREATE is not supported yet.");
+                        compDataTypeHashList.Add(PersistenceStateStableTypeHash);
+#endif
+                        var storage = new PersistentDataStorage(query.CalculateEntityCount(), compDataTypeHashList, bufferDataTypeHashList);
+
                         PersistentData[key] = storage;
                         persistentDataStorage = storage;
                     }
 
-                    for (int i = 0; i < persistentComponents.TypeHashList.Length; i++)
+                    for (int i = 0; i < persistentComponents.ComponentDataTypeHashList.Length; i++)
                     {
-                        ulong stableTypeHash = persistentComponents.TypeHashList[i];
-                        var typeIndex = TypeManager.GetTypeIndexFromStableTypeHash(persistentComponents.TypeHashList[i]);
+                        ulong stableTypeHash = persistentComponents.ComponentDataTypeHashList[i];
+                        var typeIndex = TypeManager.GetTypeIndexFromStableTypeHash(stableTypeHash);
                         var runtimeType = ComponentType.ReadOnly(typeIndex);
+                        var typeInfo = TypeManager.GetTypeInfo(typeIndex);
+                        Debug.Assert(typeInfo.Category != TypeManager.TypeCategory.BufferData, $"{runtimeType} in wrong list!"); 
+                        Debug.Assert(!TypeManager.HasEntityReferences(typeIndex), $"Persisting components with Entity References is not supported. Type: {runtimeType}"); 
+                        Debug.Assert(typeInfo.BlobAssetRefOffsetCount == 0, $"Persisting components with BlobAssetReferences is not supported. Type: {runtimeType}"); 
+
                         
                         var query = CreatePersistenceEntityQuery(system, runtimeType);
                         query.SetSharedComponentFilter(persistentComponents, sceneSection);
@@ -225,12 +266,42 @@ namespace DotsPersistency
                         #endif
                     }
                     
+                    for (int i = 0; i < persistentComponents.BufferElementTypeHashList.Length; i++)
+                    {
+                        ulong stableTypeHash = persistentComponents.BufferElementTypeHashList[i];
+                        var typeIndex = TypeManager.GetTypeIndexFromStableTypeHash(stableTypeHash);
+                        var runtimeType = ComponentType.ReadOnly(typeIndex);
+                        var typeInfo = TypeManager.GetTypeInfo(typeIndex);
+                        Debug.Assert(typeInfo.Category == TypeManager.TypeCategory.BufferData, $"{runtimeType} in wrong list!"); 
+                        //Debug.Assert(!TypeManager.HasEntityReferences(typeIndex), $"Persisting components with Entity References is not supported. Type: {runtimeType}");
+                        Debug.Assert(typeInfo.BlobAssetRefOffsetCount == 0, $"Persisting components with BlobAssetReferences is not supported. Type: {runtimeType}");
+
+                        var query = CreatePersistenceEntityQuery(system, runtimeType);
+                        query.SetSharedComponentFilter(persistentComponents, sceneSection);
+                        
+                        var dataAndFound = persistentDataStorage.GetDataAndFoundArrays(stableTypeHash);
+                        var elementSize = TypeManager.GetTypeInfo(typeIndex).ElementSize;
+                        Debug.Assert(elementSize > 0, $"Persisting Empty IBufferElementData is not supported. Type: {runtimeType}");
+
+                        jobHandle = JobHandle.CombineDependencies(jobHandle, new CopyBufferElementsToByteArray()
+                        {
+                            ChunkBufferType = system.GetArchetypeChunkBufferTypeDynamic(runtimeType),
+                            ElementSize = elementSize,
+                            MaxElements = typeInfo.BufferCapacity, 
+                            PersistenceStateType = system.GetArchetypeChunkComponentType<PersistenceState>(true),
+                            OutputData = dataAndFound.Data,
+                            AmountPersisted = dataAndFound.GetFoundAmountForBuffers()
+                        }.Schedule(query, inputDeps));
+                    }
+                    
+#if DOTS_PERSISTENCY_ENABLE_DESTROY_AND_CREATE
                     var allPersistedEntitiesQuery = CreatePersistenceEntityQuery(system);
                     allPersistedEntitiesQuery.SetSharedComponentFilter(persistentComponents, sceneSection);
                     jobHandle = JobHandle.CombineDependencies(jobHandle, new FindComponentsOnPersistentEntities()
                     {
                         OutputFound = persistentDataStorage.GetFoundArray(PersistenceStateStableTypeHash)
                     }.Schedule(allPersistedEntitiesQuery, inputDeps));
+#endif
                 }
             }
 
@@ -243,7 +314,7 @@ namespace DotsPersistency
             {
                 All = new[]
                 {
-                    ComponentType.ReadOnly<PersistentComponents>(),
+                    ComponentType.ReadOnly<PersistedTypes>(),
                     ComponentType.ReadOnly<PersistenceState>(),
                     ComponentType.ReadOnly<SceneSection>(),
                     persistedType
@@ -261,7 +332,7 @@ namespace DotsPersistency
             {
                 All = new[]
                 {
-                    ComponentType.ReadOnly<PersistentComponents>(),
+                    ComponentType.ReadOnly<PersistedTypes>(),
                     ComponentType.ReadOnly<PersistenceState>(),
                     ComponentType.ReadOnly<SceneSection>()
                 },
@@ -282,12 +353,18 @@ namespace DotsPersistency
         
         public struct PersistentDataStorage : IDisposable
         {
+            
             public struct DataAndFound : IDisposable
             {
                 // note that you can't use the same index, Found can be indexed normally, but for Data you need to multiply by TypeSize
-                public NativeArray<byte> Data;
                 public NativeArray<bool> Found;
+                public NativeArray<byte> Data;
 
+                public NativeArray<int> GetFoundAmountForBuffers()
+                {
+                    return Found.Reinterpret<int>(1);
+                }
+                
                 public void Dispose()
                 {
                     Data.Dispose();
@@ -295,41 +372,39 @@ namespace DotsPersistency
                 }
             }
             
+            
             // Todo optimization make this an array to index in
             private Dictionary<ulong, DataAndFound> _typeToData;
-            
-            public bool CurrentlyLoaded;
 
-            public PersistentDataStorage(int count, FixedList64<ulong> types)
+            public PersistentDataStorage(int count, ulong[] compDataTypeHashes, ulong[] bufferDataTypeHashes)
             {
-                _typeToData = new Dictionary<ulong, DataAndFound>(types.Length);
-                for (int i = 0; i < types.Length; i++)
+                _typeToData = new Dictionary<ulong, DataAndFound>(compDataTypeHashes.Length + bufferDataTypeHashes.Length);
+                foreach (var hash in compDataTypeHashes)
                 {
-                    var typeSize = TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(types[i])).ElementSize;
-                    _typeToData[types[i]] = new DataAndFound
+                    var typeInfo = TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(hash));
+                    var typeSize = typeInfo.ElementSize;
+                    _typeToData[hash] = new DataAndFound
                     {
                         Data = new NativeArray<byte>(typeSize * count, Allocator.Persistent),
                         Found = new NativeArray<bool>(count, Allocator.Persistent)
                     };
                 }
-                CurrentlyLoaded = true;
+                foreach (var hash in bufferDataTypeHashes)
+                {
+                    var typeInfo = TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(hash));
+                    var typeSize = typeInfo.ElementSize;
+                    int amountElements = typeInfo.BufferCapacity;
+                    _typeToData[hash] = new DataAndFound
+                    {
+                        Data = new NativeArray<byte>(typeSize * amountElements * count, Allocator.Persistent),
+                        Found = new NativeArray<bool>( count * sizeof(int) / sizeof(bool), Allocator.Persistent)
+                    };
+                }
             }
         
             public DataAndFound GetDataAndFoundArrays(ulong typeHash)
             {
                 return _typeToData[typeHash];
-            }
-            public NativeArray<byte> GetDataArray(ulong typeHash)
-            {
-                return _typeToData[typeHash].Data;
-            }
-            public NativeArray<bool> GetFoundArray(ulong typeHash)
-            {
-                return _typeToData[typeHash].Found;
-            }
-            public int GetAmount()
-            {
-                return _typeToData.First().Value.Found.Length;
             }
 
             public void Dispose()

@@ -14,15 +14,38 @@ namespace DotsPersistency.Hybrid
     {
         public List<ulong> TypesToPersistHashes= new List<ulong>();
 
-        public FixedList64<ulong> GetFixedTypesToPersistHashes()
+        public PersistedTypes GetPersistedTypes()
         {
-            Debug.Assert(TypesToPersistHashes.Count <= 64, "more than 64 persisted types is not supported");
-            var retVal = new FixedList64<ulong>();
+            return new PersistedTypes()
+            {
+                ComponentDataTypeHashList = GetComponentDataTypesToPersistHashes(),
+                BufferElementTypeHashList = GetBufferDataTypesToPersistHashes()
+            };
+        }
+        
+        private FixedList128<ulong> GetComponentDataTypesToPersistHashes()
+        {
+            var retVal = new FixedList128<ulong>();
+            Debug.Assert(TypesToPersistHashes.Count <= retVal.Capacity, $"more than {retVal.Capacity} persisted ComponentData types is not supported");
             foreach (var hash in TypesToPersistHashes)
             {
-                if (hash != 0)
+                if (hash != 0 && TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(hash)).Category == TypeManager.TypeCategory.ComponentData)
                 {
                     retVal.Add(hash); 
+                }
+            }
+            return retVal;
+        }
+        
+        private FixedList64<ulong> GetBufferDataTypesToPersistHashes()
+        {
+            var retVal = new FixedList64<ulong>();
+            Debug.Assert(TypesToPersistHashes.Count <= retVal.Capacity, $"more than {retVal.Capacity} persisted BufferData types is not supported");
+            foreach (var hash in TypesToPersistHashes)
+            {
+                if (hash != 0 && TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(hash)).Category == TypeManager.TypeCategory.BufferData) 
+                {
+                    retVal.Add(hash);
                 }
             }
             return retVal;

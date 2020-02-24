@@ -156,11 +156,21 @@ namespace DotsPersistency.Editor
         {
             public int Compare(ulong x, ulong y)
             {
-                if (x == 0 || x > y)
+                if (x == 0)
                 {
                     return 1;
                 }
-                return -1;
+                
+                bool xIsBuffer = TypeManager.IsBuffer(TypeManager.GetTypeIndexFromStableTypeHash(x));
+                bool yIsBuffer = TypeManager.IsBuffer(TypeManager.GetTypeIndexFromStableTypeHash(y));
+                if (xIsBuffer != yIsBuffer)
+                {
+                    if (xIsBuffer)
+                        return 1;
+                    return -1;
+                }
+                
+                return (int)(x - y);
             }
         }
     }

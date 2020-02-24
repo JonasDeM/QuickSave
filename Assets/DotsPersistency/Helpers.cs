@@ -1,10 +1,13 @@
 ﻿// Author: Jonas De Maeseneer
 
 using System;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 namespace DotsPersistency
@@ -15,7 +18,7 @@ namespace DotsPersistency
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             if (chunkComponentType.m_IsZeroSized)
-                throw new ArgumentException($"ArchetypeChunk.GetComponentDataAsBytePtr cannot be called on zero-sized IComponentData");
+                throw new ArgumentException($"ArchetypeChunk.GetComponentDataAsByteArray cannot be called on zero-sized IComponentData");
 
             AtomicSafetyHandle.CheckReadAndThrow(chunkComponentType.m_Safety);
 #endif
@@ -49,6 +52,7 @@ namespace DotsPersistency
         }
     }
     
+    [BurstCompile]
     public unsafe struct CopyComponentDataToByteArray : IJobChunk
     {
         [ReadOnly, NativeDisableParallelForRestriction]
@@ -71,11 +75,44 @@ namespace DotsPersistency
                 int outputByteIndex = persistenceState.ArrayIndex * TypeSize;
                 int compDataByteIndex = i * TypeSize;
 
-                //var value1 = UnsafeUtility.ReadArrayElement<Translation>(ptr, i).Value;
                 UnsafeUtility.MemCpy((byte*)OutputData.GetUnsafePtr() + outputByteIndex, (byte*)byteArray.GetUnsafeReadOnlyPtr() + compDataByteIndex, TypeSize);
                 OutputFound[persistenceState.ArrayIndex] = true;
-                //var value2 = UnsafeUtility.ReadArrayElement<Translation>((byte*)OutputData.GetUnsafeReadOnlyPtr(), persistenceState.ArrayIndex).Value;
-                //Debug.Log(persistenceState.ArrayIndex + " - " + value1 + " - " + value2);
+            }
+        }
+    }
+    
+    public unsafe struct CopyBufferElementsToByteArray : IJobChunk
+    {
+        [NativeDisableParallelForRestriction, ReadOnly]
+        public ArchetypeChunkBufferDataTypeDynamic ChunkBufferType;
+        public int ElementSize;
+        public int MaxElements;
+        [ReadOnly] 
+        public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
+        [WriteOnly, NativeDisableParallelForRestriction]
+        public NativeArray<byte> OutputData;
+        [WriteOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> AmountPersisted;
+            
+        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
+        {
+            var untypedBufferAccessor = chunk.GetUntypedBufferAccessor(ChunkBufferType);
+            var persistenceStateArray = chunk.GetNativeArray(PersistenceStateType);
+            for (int i = 0; i < persistenceStateArray.Length; i++)
+            {
+                PersistenceState persistenceState = persistenceStateArray[i];
+                var untypedBuffer = untypedBufferAccessor[i];
+                int outputByteIndex = persistenceState.ArrayIndex * ElementSize * MaxElements;
+                int amountElements = untypedBuffer.Length / ElementSize;
+                
+                // todo instead of clamp, Malloc when amountElements exceeds MaxElements (Rename MaxElements to InternalCapacity)
+                // make sure OutputData can store a pointer per entity & then just store the pointer
+                // be sure to dispose of the memory when AmountPersisted exceeds InternalCapacity
+                int amountToCopy = math.clamp(amountElements, 0, MaxElements);
+                
+                // when safety check bug is fixed move this back to .GetUnsafePtr
+                UnsafeUtility.MemCpy((byte*)OutputData.GetUnsafePtr() + outputByteIndex, NativeArrayUnsafeUtility.GetUnsafeBufferPointerWithoutChecks(untypedBuffer), ElementSize * amountToCopy);
+                AmountPersisted[persistenceState.ArrayIndex] = amountToCopy;
             }
         }
     }
@@ -157,12 +194,11 @@ namespace DotsPersistency
         }
     }
     
-    // not working yet
     public unsafe struct CreateEntities : IJobParallelFor
     {
         public EntityCommandBuffer.Concurrent Ecb;
         public SceneSection SceneSection;
-        public PersistentComponents PersistentComponents;
+        public PersistedTypes PersistedTypes;
         [ReadOnly]
         public NativeArray<bool>  EntitiesFound;
         [ReadOnly, DeallocateOnJobCompletion]
@@ -206,16 +242,13 @@ namespace DotsPersistency
                 Ecb.AddComponent<PersistenceState>(index, entity);
                 Ecb.SetComponent(index, entity, persistenceState);
                 Ecb.AddSharedComponent(index, entity, SceneSection);
-                Ecb.AddSharedComponent(index, entity, PersistentComponents);
+                Ecb.AddSharedComponent(index, entity, PersistedTypes);
             }
 
             for (int i = 0; i < ExistingEntities.Length; i++)
             {
                 Debug.Log($"Existing: {ExistingEntities[i].ArrayIndex}");
             }
-
-            // todo test this thoroughly
-            // throw new NotImplementedException();
         }
     }
 
@@ -244,6 +277,39 @@ namespace DotsPersistency
                 UnsafeUtility.MemCpy((byte*)byteArray.GetUnsafePtr() + compDataByteIndex, (byte*)Input.GetUnsafeReadOnlyPtr() + inputByteIndex, TypeSize);
                 //var value2 = UnsafeUtility.ReadArrayElement<Translation>(ptr, i).Value;
                 //Debug.Log(persistenceState.ArrayIndex + " - " + value1 + " - " + value2);
+            }
+        }
+    }
+
+    public unsafe struct CopyByteArrayToBufferElements : IJobChunk
+    {
+        [NativeDisableContainerSafetyRestriction]
+        public ArchetypeChunkBufferDataTypeDynamic ArchetypeChunkBufferDataTypeDynamic;
+        
+        public int ElementSize;
+        public int MaxElements;
+        [ReadOnly] 
+        public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<byte> InputData;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> AmountPersisted;
+
+        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
+        {
+            var untypedBufferAccessor = chunk.GetUntypedBufferAccessor(ArchetypeChunkBufferDataTypeDynamic);
+            var persistenceStateArray = chunk.GetNativeArray(PersistenceStateType);
+            for (int i = 0; i < persistenceStateArray.Length; i++)
+            {
+                PersistenceState persistenceState = persistenceStateArray[i];
+                int inputByteIndex = persistenceState.ArrayIndex * ElementSize * MaxElements;
+                
+                int amountToCopy = AmountPersisted[persistenceState.ArrayIndex];
+                untypedBufferAccessor.ResizeBufferUninitialized(i, amountToCopy);
+                var untypedBuffer = untypedBufferAccessor[i];
+
+                // when safety check bug is fixed move this back to .GetUnsafePtr
+                UnsafeUtility.MemCpy(NativeArrayUnsafeUtility.GetUnsafeBufferPointerWithoutChecks(untypedBuffer), (byte*)InputData.GetUnsafeReadOnlyPtr() + inputByteIndex, ElementSize * amountToCopy);
             }
         }
     }

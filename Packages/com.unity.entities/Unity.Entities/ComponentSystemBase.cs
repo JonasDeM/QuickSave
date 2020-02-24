@@ -504,6 +504,12 @@ namespace Unity.Entities
             AddReaderWriter(isReadOnly ? ComponentType.ReadOnly<T>() : ComponentType.ReadWrite<T>());
             return EntityManager.GetArchetypeChunkBufferType<T>(isReadOnly);
         }
+        
+        public ArchetypeChunkBufferDataTypeDynamic GetArchetypeChunkBufferTypeDynamic(ComponentType componentType)
+        {
+            AddReaderWriter(componentType);
+            return EntityManager.GetArchetypeChunkBufferTypeDynamic(componentType);
+        }
 
         /// <summary>
         /// Gets the run-time type information required to access a shared component data in a chunk.

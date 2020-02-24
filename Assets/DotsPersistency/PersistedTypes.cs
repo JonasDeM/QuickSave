@@ -7,10 +7,11 @@ using Unity.Entities;
 
 namespace DotsPersistency
 {
-    public struct PersistentComponents : ISharedComponentData
+    public struct PersistedTypes : ISharedComponentData
     {
         // Todo optimization during runtime we should have mapped these to indices
-        public FixedList128<ulong> TypeHashList; // can store 15 type hashes
+        public FixedList128<ulong> ComponentDataTypeHashList; // can store 15 type hashes
+        public FixedList64<ulong> BufferElementTypeHashList; // can store 7 type hashes
     }
     
     public struct PersistenceState : IComponentData, IEquatable<PersistenceState>
@@ -21,9 +22,5 @@ namespace DotsPersistency
         {
             return ArrayIndex == other.ArrayIndex;
         }
-    }
-    
-    public struct PersistenceSystemState : ISystemStateComponentData
-    {
     }
 }

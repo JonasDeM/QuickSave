@@ -19,11 +19,8 @@ namespace DotsPersistency.Hybrid
                 =>
             {
                 Entity e = GetPrimaryEntity(persistencyAuthoring);
-
-                FixedList64<ulong> list = persistencyAuthoring.GetFixedTypesToPersistHashes();
                 
-                var componentsToPersist = new PersistentComponents() { TypeHashList = list };
-                DstEntityManager.AddSharedComponentData(e, componentsToPersist);
+                DstEntityManager.AddSharedComponentData(e, persistencyAuthoring.GetPersistedTypes());
                 
                 DstEntityManager.AddComponentData(e, new PersistenceState()
                 {

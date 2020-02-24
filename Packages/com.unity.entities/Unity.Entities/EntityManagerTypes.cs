@@ -84,6 +84,19 @@ namespace Unity.Entities
 #endif
         }
         
+        public ArchetypeChunkBufferDataTypeDynamic GetArchetypeChunkBufferTypeDynamic(ComponentType componentType)
+        {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            var typeIndex = componentType.TypeIndex;
+            return new ArchetypeChunkBufferDataTypeDynamic(
+                SafetyHandles->GetSafetyHandle(typeIndex, componentType.AccessModeType == ComponentType.AccessMode.ReadOnly),
+                SafetyHandles->GetBufferSafetyHandle(typeIndex),
+                componentType, GlobalSystemVersion);
+#else
+            return new ArchetypeChunkBufferTypeDynamic(componentType, GlobalSystemVersion);
+#endif
+        }
+        
         /// <summary>
         /// Gets the dynamic type object required to access a shared component of type T.
         /// </summary>

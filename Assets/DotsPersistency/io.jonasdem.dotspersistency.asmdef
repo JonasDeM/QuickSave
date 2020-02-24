@@ -1,12 +1,13 @@
 {
     "name": "io.jonasdem.dotspersistency",
     "references": [
+        "Unity.Burst",
+        "Unity.Collections",
         "Unity.Entities",
         "Unity.Jobs",
-        "Unity.Collections",
-        "Unity.Transforms",
         "Unity.Mathematics",
-        "Unity.Scenes.Hybrid"
+        "Unity.Scenes.Hybrid",
+        "Unity.Transforms"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

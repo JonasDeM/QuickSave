@@ -15,14 +15,12 @@ namespace DotsPersistency.Editor
         public List<string> FullTypeNames = new List<string>()
         {
             "Unity.Transforms.Translation",
-            "Unity.Transforms.Rotation",
-            "Unity.Transforms.Scale",
+            "Unity.Transforms.Rotation"
         };
         
-        public List<AssemblyDefinitionAsset> Assemblies = new List<AssemblyDefinitionAsset>()
-        {
-        };
-
+        public List<AssemblyDefinitionAsset> Assemblies = new List<AssemblyDefinitionAsset>() { };
+        
+        
         public static PersistableTypesInfo GetInstance()
         {
             if (_instance == null)
