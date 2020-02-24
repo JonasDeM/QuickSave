@@ -128,7 +128,7 @@ namespace DotsPersistency
         }
     }
     
-    public unsafe struct AddMissingComponents : IJobChunk
+    public struct AddMissingComponents : IJobChunk
     {        
         [ReadOnly, NativeDisableParallelForRestriction]
         public ArchetypeChunkEntityType EntityType;
@@ -154,9 +154,9 @@ namespace DotsPersistency
                 if (InputFound[persistenceState.ArrayIndex])
                 {
                     Ecb.AddComponent(chunkIndex, entityArray[i], ComponentType); 
-                    if (TypeSize != 0) // todo optimization do check when scheduling & schedule different job that only Adds
+                    if (TypeSize != 0) // todo micro optimization do check when scheduling & schedule different job that only Adds
                     {
-                        Ecb.SetComponent(chunkIndex, entityArray[i], ComponentType, TypeSize, NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<byte>((byte*)InputData.GetUnsafeReadOnlyPtr() + inputByteIndex, TypeSize, Allocator.None));
+                        Ecb.SetComponent(chunkIndex, entityArray[i], ComponentType, TypeSize, InputData.GetSubArray(inputByteIndex, TypeSize));
                     }
                 }
             }
