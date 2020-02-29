@@ -1,12 +1,13 @@
-﻿using System;
+﻿// Author: Jonas De Maeseneer
+
+using System;
 using System.Linq;
 using NUnit.Framework;
-using NUnit.Framework.Internal.Commands;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Entities.Tests;
-using UnityEngine;
+using Unity.Jobs;
 // ReSharper disable AccessToDisposedClosure
 
 namespace DotsPersistency.Tests
@@ -15,18 +16,21 @@ namespace DotsPersistency.Tests
     class ComponentDataTests : ECSTestsFixture
     {
         [Test]
-        public void TestReadComponentData()
+        public void TestReadComponentData([Values(0, 1, 2, 3, 60, 400)] int total)
         {
             // Preparation
-            int total = 60;
             CreateEntities(total);
+
+            int entityAmount3 = total / 3;
+            int entityAmount1 = entityAmount3 + (total%3 > 0 ? 1 : 0);
+            int entityAmount2 = entityAmount3 + (total%3 > 1 ? 1 : 0);
             
-            NativeArray<EcsPersistingTestData> array1IntData = new NativeArray<EcsPersistingTestData>(total / 3, Allocator.TempJob);
-            NativeArray<bool> array1IntFound = new NativeArray<bool>( total / 3, Allocator.TempJob);
-            NativeArray<EcsPersistingFloatTestData2> array2FloatData = new NativeArray<EcsPersistingFloatTestData2>(total / 3, Allocator.TempJob);
-            NativeArray<bool> array2FloatFound = new NativeArray<bool>(total / 3, Allocator.TempJob);
-            NativeArray<EcsPersistingTestData5> array5IntData = new NativeArray<EcsPersistingTestData5>(total / 3, Allocator.TempJob);
-            NativeArray<bool> array5IntFound = new NativeArray<bool>(total / 3, Allocator.TempJob);
+            NativeArray<EcsPersistingTestData> array1IntData = new NativeArray<EcsPersistingTestData>(entityAmount1, Allocator.TempJob);
+            NativeArray<bool> array1IntFound = new NativeArray<bool>( entityAmount1, Allocator.TempJob);
+            NativeArray<EcsPersistingFloatTestData2> array2FloatData = new NativeArray<EcsPersistingFloatTestData2>(entityAmount2, Allocator.TempJob);
+            NativeArray<bool> array2FloatFound = new NativeArray<bool>(entityAmount2, Allocator.TempJob);
+            NativeArray<EcsPersistingTestData5> array5IntData = new NativeArray<EcsPersistingTestData5>(entityAmount3, Allocator.TempJob);
+            NativeArray<bool> array5IntFound = new NativeArray<bool>(entityAmount3, Allocator.TempJob);
 
             var query1 = m_Manager.CreateEntityQuery(typeof(EcsPersistingTestData), typeof(PersistenceState));
             var query2 = m_Manager.CreateEntityQuery(typeof(EcsPersistingFloatTestData2), typeof(PersistenceState));
@@ -41,32 +45,34 @@ namespace DotsPersistency.Tests
             });
 
             // Action
-            new CopyComponentDataToByteArray()
+            var job1 = new CopyComponentDataToByteArray()
             {
                 ChunkComponentType = m_Manager.GetArchetypeChunkComponentTypeDynamic(typeof(EcsPersistingTestData)),
                 TypeSize = UnsafeUtility.SizeOf<EcsPersistingTestData>(),
                 PersistenceStateType = m_Manager.GetArchetypeChunkComponentType<PersistenceState>(true),
                 OutputData = array1IntData.Reinterpret<byte>(UnsafeUtility.SizeOf<EcsPersistingTestData>()),
                 OutputFound = array1IntFound
-            }.Run(query1);
+            }.Schedule(query1);
             
-            new CopyComponentDataToByteArray()
+            var job2 =new CopyComponentDataToByteArray()
             {
                 ChunkComponentType = m_Manager.GetArchetypeChunkComponentTypeDynamic(typeof(EcsPersistingFloatTestData2)),
                 TypeSize = UnsafeUtility.SizeOf<EcsPersistingFloatTestData2>() ,
                 PersistenceStateType = m_Manager.GetArchetypeChunkComponentType<PersistenceState>(true),
                 OutputData = array2FloatData.Reinterpret<byte>(UnsafeUtility.SizeOf<EcsPersistingFloatTestData2>()),
                 OutputFound = array2FloatFound
-            }.Run(query2);
+            }.Schedule(query2);
             
-            new CopyComponentDataToByteArray()
+            var job3 =new CopyComponentDataToByteArray()
             {
                 ChunkComponentType = m_Manager.GetArchetypeChunkComponentTypeDynamic(typeof(EcsPersistingTestData5)),
                 TypeSize = UnsafeUtility.SizeOf<EcsPersistingTestData5>() ,
                 PersistenceStateType = m_Manager.GetArchetypeChunkComponentType<PersistenceState>(true),
                 OutputData = array5IntData.Reinterpret<byte>(UnsafeUtility.SizeOf<EcsPersistingTestData5>()),
                 OutputFound = array5IntFound
-            }.Run(query3);
+            }.Schedule(query3);
+            
+            JobHandle.CombineDependencies(job1, job2, job3).Complete();
             
             // Check Results
             Entities.With(query1).ForEach(entity =>
@@ -92,7 +98,7 @@ namespace DotsPersistency.Tests
             
             Assert.False(array1IntFound.Contains(false), "1 or more entities were not found for persisting");
             Assert.False(array2FloatFound.Contains(false), "1 or more entities were not found for persisting");
-            Assert.True(array5IntFound.Contains(false), "All values in the found array were true but some entities did not exist.");
+            Assert.True(array5IntFound.Contains(false) || array5IntFound.Length == 0, "All values in the found array were true but some entities did not exist.");
 
             // Cleanup
             array1IntData.Dispose();
@@ -105,17 +111,20 @@ namespace DotsPersistency.Tests
         }
         
         [Test]
-        public void TestApplyStoredData()
+        public void TestApplyStoredData([Values(0, 1, 2, 3, 60, 401)] int total)
         {
             // Preparation
-            int total = 60;
             CreateEntities(total);
             
-            NativeArray<EcsPersistingTestData> array1IntData = new NativeArray<EcsPersistingTestData>(total / 3, Allocator.TempJob);
+            int entityAmount3 = total / 3;
+            int entityAmount1 = entityAmount3 + (total%3 > 0 ? 1 : 0);
+            int entityAmount2 = entityAmount3 + (total%3 > 1 ? 1 : 0);
+            
+            NativeArray<EcsPersistingTestData> array1IntData = new NativeArray<EcsPersistingTestData>(entityAmount1, Allocator.TempJob);
             NativeArray<bool> array1IntFound = new NativeArray<bool>(Enumerable.Repeat(true, array1IntData.Length).ToArray(), Allocator.TempJob);
-            NativeArray<EcsPersistingFloatTestData2> array2FloatData = new NativeArray<EcsPersistingFloatTestData2>(total / 3, Allocator.TempJob);
+            NativeArray<EcsPersistingFloatTestData2> array2FloatData = new NativeArray<EcsPersistingFloatTestData2>(entityAmount2, Allocator.TempJob);
             NativeArray<bool> array2FloatFound = new NativeArray<bool>(Enumerable.Repeat(true, array2FloatData.Length).ToArray(), Allocator.TempJob);
-            NativeArray<EcsPersistingTestData5> array5IntData = new NativeArray<EcsPersistingTestData5>(total / 3, Allocator.TempJob);
+            NativeArray<EcsPersistingTestData5> array5IntData = new NativeArray<EcsPersistingTestData5>(entityAmount3, Allocator.TempJob);
             NativeArray<bool> array5IntFound = new NativeArray<bool>(Enumerable.Repeat(true, array5IntData.Length).ToArray(), Allocator.TempJob);
 
             var query1 = m_Manager.CreateEntityQuery(typeof(EcsPersistingTestData), typeof(PersistenceState));

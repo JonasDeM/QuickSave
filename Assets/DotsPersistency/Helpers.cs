@@ -14,6 +14,7 @@ namespace DotsPersistency
 {
     public static unsafe class EntitiesExtensions
     {
+        // todo move to entities package
         public static NativeArray<byte> GetComponentDataAsByteArray(this ArchetypeChunk archetypeChunk, ArchetypeChunkComponentTypeDynamic chunkComponentType)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -117,7 +118,7 @@ namespace DotsPersistency
         }
     }
 
-    public struct FindComponentsOnPersistentEntities : IJobForEach<PersistenceState>
+    public struct FindPersistentEntities : IJobForEach<PersistenceState>
     {
         [WriteOnly, NativeDisableParallelForRestriction]
         public NativeArray<bool> OutputFound;
@@ -201,6 +202,7 @@ namespace DotsPersistency
         public PersistedTypes PersistedTypes;
         [ReadOnly]
         public NativeArray<bool>  EntitiesFound;
+        
         [ReadOnly, DeallocateOnJobCompletion]
         public NativeArray<IntPtr>  ArrayOfInputFoundArrays; // [TypeIndex][ArrayIndex]
         [ReadOnly, DeallocateOnJobCompletion]
@@ -284,7 +286,7 @@ namespace DotsPersistency
     public unsafe struct CopyByteArrayToBufferElements : IJobChunk
     {
         [NativeDisableContainerSafetyRestriction]
-        public ArchetypeChunkBufferDataTypeDynamic ArchetypeChunkBufferDataTypeDynamic;
+        public ArchetypeChunkBufferDataTypeDynamic ChunkBufferType;
         
         public int ElementSize;
         public int MaxElements;
@@ -297,7 +299,7 @@ namespace DotsPersistency
 
         public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
         {
-            var untypedBufferAccessor = chunk.GetUntypedBufferAccessor(ArchetypeChunkBufferDataTypeDynamic);
+            var untypedBufferAccessor = chunk.GetUntypedBufferAccessor(ChunkBufferType);
             var persistenceStateArray = chunk.GetNativeArray(PersistenceStateType);
             for (int i = 0; i < persistenceStateArray.Length; i++)
             {

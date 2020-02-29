@@ -19,7 +19,7 @@ namespace DotsPersistency
         [Serializable]
         public struct PersistentDataStorageKey : IComponentData
         {
-            [FormerlySerializedAs("PersistentComponents")] public PersistedTypes persistedTypes;
+            public PersistedTypes PersistedTypes;
             public SceneSection SceneSection;
         }
     
@@ -36,7 +36,7 @@ namespace DotsPersistency
         public JobHandle ScheduleFromPersistentDataJobs(ComponentSystemBase system, EntityCommandBufferSystem ecbSystem, JobHandle inputDeps)
         {            
             // get all the type combinations that were once persisted
-            var persistentComponentsList = PersistentData.Keys.Select(key => key.persistedTypes).Distinct();
+            var persistentComponentsList = PersistentData.Keys.Select(key => key.PersistedTypes).Distinct();
             List<SceneSection> sceneSectionList = new List<SceneSection>();
             // only read from persistent data for scene sections currently loaded
             // (bug what if there is an empty scene section? I will need to get all loaded scenesections in another manner)
@@ -53,7 +53,7 @@ namespace DotsPersistency
                 {
                     var key = new PersistentDataStorageKey
                     {
-                        persistedTypes = persistentComponents,
+                        PersistedTypes = persistentComponents,
                         SceneSection = sceneSection
                     };
 
@@ -118,7 +118,7 @@ namespace DotsPersistency
 
                             mainJobHandle = JobHandle.CombineDependencies(mainJobHandle, new CopyByteArrayToBufferElements()
                             {
-                                ArchetypeChunkBufferDataTypeDynamic = system.GetArchetypeChunkBufferTypeDynamic(runtimeType),
+                                ChunkBufferType = system.GetArchetypeChunkBufferTypeDynamic(runtimeType),
                                 ElementSize = elementSize,
                                 MaxElements = typeInfo.BufferCapacity, 
                                 PersistenceStateType = system.GetArchetypeChunkComponentType<PersistenceState>(true),
@@ -201,7 +201,7 @@ namespace DotsPersistency
                 {
                     var key = new PersistentDataStorageKey
                     {
-                        persistedTypes = persistentComponents,
+                        PersistedTypes = persistentComponents,
                         SceneSection = sceneSection
                     };
 
@@ -251,7 +251,7 @@ namespace DotsPersistency
                         }
                         else
                         {
-                            jobHandle = JobHandle.CombineDependencies(jobHandle, new FindComponentsOnPersistentEntities()
+                            jobHandle = JobHandle.CombineDependencies(jobHandle, new FindPersistentEntities()
                             {
                                 OutputFound = dataAndFound.Found
                             }.Schedule(query, inputDeps));
@@ -373,7 +373,7 @@ namespace DotsPersistency
             }
             
             
-            // Todo optimization make this an array to index in
+            // Todo optimization make this 1 big array to index in
             private Dictionary<ulong, DataAndFound> _typeToData;
 
             public PersistentDataStorage(int count, ulong[] compDataTypeHashes, ulong[] bufferDataTypeHashes)
