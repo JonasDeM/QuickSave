@@ -320,10 +320,13 @@ namespace DotsPersistency.Tests
         }
         struct DynamicBufferData2 : IBufferElementData
         {
+#pragma warning disable 649
             public float Value;
+#pragma warning restore 649
             
             public override string ToString()
             {
+                // ReSharper disable once SpecifyACultureInStringConversionExplicitly
                 return Value.ToString();
             }
         }
