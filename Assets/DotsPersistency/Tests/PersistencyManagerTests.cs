@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using NUnit.Framework;
-using Unity.Entities.Tests;
-using UnityEngine;
 
 namespace DotsPersistency.Tests
 {
     [TestFixture]
-    class PersistencyManagerTests : ECSTestsFixture
+    class PersistencyManagerTests : EcsTestsFixture
     {
         [Test]
         public void PersistTest()

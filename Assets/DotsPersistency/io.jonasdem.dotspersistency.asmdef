@@ -10,7 +10,9 @@
         "Unity.Transforms",
         "io.jonasdem.dotspersistency.containers"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
     "overrideReferences": false,

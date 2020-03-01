@@ -6,14 +6,13 @@ using NUnit.Framework;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
-using Unity.Entities.Tests;
 using Unity.Jobs;
 // ReSharper disable AccessToDisposedClosure
 
 namespace DotsPersistency.Tests
 {
     [TestFixture]
-    class ComponentDataTests : ECSTestsFixture
+    class ComponentDataTests : EcsTestsFixture
     {
         [Test]
         public void TestReadComponentData([Values(0, 1, 2, 3, 60, 400)] int total)
@@ -203,7 +202,7 @@ namespace DotsPersistency.Tests
             });
             
             // Preparation
-            Entities.WithAll<PersistenceState>().ForEach(entity =>
+            Entities.WithAll<PersistenceState>().ForEach((Entity entity) =>
             {
                 int index = m_Manager.GetComponentData<PersistenceState>(entity).ArrayIndex;
                 if (index % 2 == 1)

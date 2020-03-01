@@ -1,11 +1,11 @@
 {
     "name": "Tests",
     "references": [
-        "io.jonasdem.dotspersistency",
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
-        "Unity.Entities.Tests",
-        "Unity.Entities"
+        "GUID:42697df707fc47a4aa81e8cf52f99bfe",
+        "GUID:27619889b8ba8c24980f49ee34dbb44a",
+        "GUID:0acc523941302664db1f4e527237feb3",
+        "GUID:734d92eba21c94caba915361bd5ac177",
+        "GUID:8e2f79f713f5a47dcb69903037d4bc0e"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

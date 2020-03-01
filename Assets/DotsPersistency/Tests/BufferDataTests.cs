@@ -6,7 +6,6 @@ using NUnit.Framework;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
-using Unity.Entities.Tests;
 using Unity.Jobs;
 using UnityEngine;
 
@@ -15,7 +14,7 @@ using UnityEngine;
 namespace DotsPersistency.Tests
 {
     [TestFixture]
-    class BufferDataTests : ECSTestsFixture
+    class BufferDataTests : EcsTestsFixture
     {
         [Test]
         public void TestReadBufferData([Values(0, 1, 2, 3, 60, 400)] int total)
