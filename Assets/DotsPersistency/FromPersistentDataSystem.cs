@@ -12,7 +12,7 @@ namespace DotsPersistency
     [AlwaysUpdateSystem]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [UpdateAfter(typeof(SceneSystemGroup))]
-    public class FromPersistentDataSystem : JobComponentSystem
+    public class FromPersistentDataSystem : PersistencyJobSystem
     {
         public PersistencyManager PersistencyManager;
         private EntityCommandBufferSystem _ecbSystem;

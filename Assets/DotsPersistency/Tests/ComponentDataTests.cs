@@ -225,7 +225,7 @@ namespace DotsPersistency.Tests
 
             using (EntityCommandBuffer cmds = new EntityCommandBuffer(Allocator.TempJob))
             {
-                new AddMissingComponents()
+                new AddMissingComponent()
                 {
                     ComponentType = typeof(EcsPersistingTestData),
                     TypeSize = UnsafeUtility.SizeOf<EcsPersistingTestData>(),
@@ -240,7 +240,7 @@ namespace DotsPersistency.Tests
 
             using (EntityCommandBuffer cmds = new EntityCommandBuffer(Allocator.TempJob))
             {
-                new AddMissingComponents()
+                new AddMissingComponent()
                 {
                     ComponentType = typeof(EcsPersistingFloatTestData2),
                     TypeSize = UnsafeUtility.SizeOf<EcsPersistingFloatTestData2>(),
@@ -255,7 +255,7 @@ namespace DotsPersistency.Tests
 
             using (EntityCommandBuffer cmds = new EntityCommandBuffer(Allocator.TempJob))
             {
-                new AddMissingComponents()
+                new AddMissingComponent()
                 {
                     ComponentType = typeof(EcsPersistingTestData5),
                     TypeSize = UnsafeUtility.SizeOf<EcsPersistingTestData5>(),

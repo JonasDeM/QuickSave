@@ -326,7 +326,6 @@ namespace DotsPersistency.Tests
             
             public override string ToString()
             {
-                // ReSharper disable once SpecifyACultureInStringConversionExplicitly
                 return Value.ToString();
             }
         }

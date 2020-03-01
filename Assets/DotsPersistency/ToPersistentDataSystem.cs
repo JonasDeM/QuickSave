@@ -11,12 +11,12 @@ namespace DotsPersistency
 {
     [AlwaysUpdateSystem]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
-    public class ToPersistentDataSystem : JobComponentSystem
+    public class ToPersistentDataSystem : PersistencyJobSystem
     {
         private FromPersistentDataSystem _fromSystem;
 
         protected override void OnCreate()
-        { 
+        {
             _fromSystem = World.GetOrCreateSystem<FromPersistentDataSystem>();
         }
     

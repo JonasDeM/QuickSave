@@ -1,6 +1,10 @@
 ﻿// Author: Jonas De Maeseneer
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using DotsPersistency.Containers;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -12,47 +16,6 @@ using UnityEngine;
 
 namespace DotsPersistency
 {
-    public static unsafe class EntitiesExtensions
-    {
-        // todo move to entities package
-        public static NativeArray<byte> GetComponentDataAsByteArray(this ArchetypeChunk archetypeChunk, ArchetypeChunkComponentTypeDynamic chunkComponentType)
-        {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            if (chunkComponentType.m_IsZeroSized)
-                throw new ArgumentException($"ArchetypeChunk.GetComponentDataAsByteArray cannot be called on zero-sized IComponentData");
-
-            AtomicSafetyHandle.CheckReadAndThrow(chunkComponentType.m_Safety);
-#endif
-            var chunk = archetypeChunk.m_Chunk;
-            
-            var archetype = chunk->Archetype;
-            ChunkDataUtility.GetIndexInTypeArray(chunk->Archetype, chunkComponentType.m_TypeIndex, ref chunkComponentType.m_TypeLookupCache);
-            var typeIndexInArchetype = chunkComponentType.m_TypeLookupCache;
-            if (typeIndexInArchetype == -1)
-            {
-                var emptyResult = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<byte>(null, 0, 0);
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-                NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref emptyResult, chunkComponentType.m_Safety);
-#endif
-                return emptyResult;
-            }
-
-            int typeSize = archetype->SizeOfs[typeIndexInArchetype];
-            var length = chunk->Count;
-            int byteLen = length * typeSize;
-            
-            var buffer = chunk->Buffer;
-            var startOffset = archetype->Offsets[typeIndexInArchetype];
-            var result = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<byte>(buffer + startOffset, byteLen, Allocator.None);
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref result, chunkComponentType.m_Safety);
-#endif
-            if (!chunkComponentType.IsReadOnly)
-                chunk->SetChangeVersion(typeIndexInArchetype, chunkComponentType.GlobalSystemVersion);
-            return result;
-        }
-    }
-    
     [BurstCompile]
     public unsafe struct CopyComponentDataToByteArray : IJobChunk
     {
@@ -82,6 +45,7 @@ namespace DotsPersistency
         }
     }
     
+    [BurstCompile]
     public unsafe struct CopyBufferElementsToByteArray : IJobChunk
     {
         [NativeDisableParallelForRestriction, ReadOnly]
@@ -118,6 +82,7 @@ namespace DotsPersistency
         }
     }
 
+    [BurstCompile]
     public struct FindPersistentEntities : IJobForEach<PersistenceState>
     {
         [WriteOnly, NativeDisableParallelForRestriction]
@@ -129,7 +94,8 @@ namespace DotsPersistency
         }
     }
     
-    public struct AddMissingComponents : IJobChunk
+    [BurstCompile]
+    public struct AddMissingComponent : IJobChunk
     {        
         [ReadOnly, NativeDisableParallelForRestriction]
         public ArchetypeChunkEntityType EntityType;
@@ -155,7 +121,7 @@ namespace DotsPersistency
                 if (InputFound[persistenceState.ArrayIndex])
                 {
                     Ecb.AddComponent(chunkIndex, entityArray[i], ComponentType); 
-                    if (TypeSize != 0) // todo micro optimization do check when scheduling & schedule different job that only Adds
+                    if (TypeSize != 0)
                     {
                         Ecb.SetComponent(chunkIndex, entityArray[i], ComponentType, TypeSize, InputData.GetSubArray(inputByteIndex, TypeSize));
                     }
@@ -164,7 +130,8 @@ namespace DotsPersistency
         }
     }
     
-    public struct RemoveComponents : IJobForEachWithEntity<PersistenceState>
+    [BurstCompile]
+    public struct RemoveComponent : IJobForEachWithEntity<PersistenceState>
     {        
         public EntityCommandBuffer.Concurrent Ecb;
         public ComponentType ComponentType;
@@ -180,6 +147,7 @@ namespace DotsPersistency
         }
     }
     
+    [BurstCompile]
     public struct DestroyEntities : IJobForEachWithEntity<PersistenceState>
     {        
         public EntityCommandBuffer.Concurrent Ecb;
@@ -195,13 +163,14 @@ namespace DotsPersistency
         }
     }
     
+    [BurstCompile]
     public unsafe struct CreateEntities : IJobParallelFor
     {
         public EntityCommandBuffer.Concurrent Ecb;
         public SceneSection SceneSection;
         public PersistedTypes PersistedTypes;
         [ReadOnly]
-        public NativeArray<bool>  EntitiesFound;
+        public NativeArray<bool>  EntityFoundArray; // whether the entity existed at time of persisting
         
         [ReadOnly, DeallocateOnJobCompletion]
         public NativeArray<IntPtr>  ArrayOfInputFoundArrays; // [TypeIndex][ArrayIndex]
@@ -217,7 +186,7 @@ namespace DotsPersistency
         public void Execute(int index)
         {
             var persistenceState = new PersistenceState {ArrayIndex = index};
-            if (EntitiesFound[index] && !ExistingEntities.Contains(persistenceState))
+            if (EntityFoundArray[index] && !ExistingEntities.Contains(persistenceState))
             {
                 var entity = Ecb.CreateEntity(index);
                 for (int i = 0; i < ComponentTypesToAdd.Length; i++)
@@ -254,6 +223,7 @@ namespace DotsPersistency
         }
     }
 
+    [BurstCompile]
     public unsafe struct CopyByteArrayToComponentData : IJobChunk
     {
         [NativeDisableContainerSafetyRestriction]
@@ -283,6 +253,7 @@ namespace DotsPersistency
         }
     }
 
+    [BurstCompile]
     public unsafe struct CopyByteArrayToBufferElements : IJobChunk
     {
         [NativeDisableContainerSafetyRestriction]
