@@ -1,18 +1,16 @@
 {
     "name": "io.jonasdem.dotspersistency",
     "references": [
+        "io.jonasdem.dotspersistency.containers",
         "Unity.Burst",
         "Unity.Collections",
         "Unity.Entities",
         "Unity.Jobs",
         "Unity.Mathematics",
         "Unity.Scenes.Hybrid",
-        "Unity.Transforms",
-        "io.jonasdem.dotspersistency.containers"
+        "Unity.Transforms"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
     "overrideReferences": false,

@@ -3,14 +3,16 @@
     "com.unity.burst": "1.2.1",
     "com.unity.collab-proxy": "1.2.16",
     "com.unity.dots.editor": "0.3.0-preview",
-    "com.unity.entities": "https://github.com/JonasDeM/Entities.git",
+    "com.unity.entities": "file:C:/Workspace/Entities",
     "com.unity.ide.rider": "1.1.4",
     "com.unity.ide.vscode": "1.1.4",
     "com.unity.physics": "0.2.5-preview.1",
+    "com.unity.rendering.hybrid": "0.3.4-preview.24",
     "com.unity.test-framework": "1.1.11",
     "com.unity.textmeshpro": "2.0.1",
     "com.unity.timeline": "1.2.10",
     "com.unity.ugui": "1.0.0",
+    "io.github.jonasdem.entityselection": "file:C:/Workspace/EntitySelection",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
     "com.unity.modules.animation": "1.0.0",
@@ -42,11 +44,5 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0"
-  },
-  "lock": {
-    "com.unity.entities": {
-      "revision": "HEAD",
-      "hash": "c153ecbda0d02923286898eae020fbbb735d1392"
-    }
   }
 }
