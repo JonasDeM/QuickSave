@@ -17,6 +17,8 @@ namespace DotsPersistency
 
         protected override void OnCreate()
         {
+            InitializeReadOnly(RuntimePersistableTypesInfo.Load());
+            
             _fromSystem = World.GetOrCreateSystem<FromPersistentDataSystem>();
         }
     

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using DotsPersistency.Hybrid;
+using JetBrains.Annotations;
 using Unity.Entities;
 using UnityEditor;
 using UnityEngine;
@@ -13,48 +14,12 @@ namespace DotsPersistency.Editor
     [CustomEditor(typeof(PersistencyAuthoring)), CanEditMultipleObjects]
     public class PersistencyBehaviourEditor : UnityEditor.Editor
     {
-        List<ulong> _cachedTypes = new List<ulong>();
-
-        [Serializable]
-        struct AssemblyName
-        {
-#pragma warning disable CS0649
-            public string name;
-#pragma warning restore CS0649
-        }
+        List<ulong> _cachedTypes;
 
         private void OnEnable()
         {
+            _cachedTypes = new List<ulong>(PersistableTypesInfo.GetOrCreateRuntimeVersion().StableTypeHashes);
             _cachedTypes.Add(0);
-
-            foreach (var fullTypeName in PersistableTypesInfo.GetInstance().FullTypeNames)
-            {
-                Type type = null;
-                foreach (var assemblyDefAsset in PersistableTypesInfo.GetInstance().Assemblies)
-                {
-                    try
-                    {
-                        var assembly = Assembly.Load(JsonUtility.FromJson<AssemblyName>(assemblyDefAsset.text).name);
-                        type = assembly.GetType(fullTypeName);
-                        if (type != null)
-                        {
-                            break;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogWarning(e);
-                    }
-                }
-                if (type == null)
-                {
-                    Debug.LogWarning($"PersistableTypesInfo contains \"{fullTypeName}\", but type could not be found");
-                }
-                else
-                {
-                    _cachedTypes.Add(TypeManager.GetTypeInfo(TypeManager.GetTypeIndex(type)).StableTypeHash);
-                }
-            }
         }
 
         public override void OnInspectorGUI()

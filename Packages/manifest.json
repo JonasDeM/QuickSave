@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.unity.burst": "1.2.1",
+    "com.unity.burst": "1.2.3",
     "com.unity.collab-proxy": "1.2.16",
     "com.unity.dots.editor": "0.3.0-preview",
     "com.unity.entities": "file:C:/Workspace/Entities",
@@ -10,9 +10,9 @@
     "com.unity.rendering.hybrid": "0.3.4-preview.24",
     "com.unity.test-framework": "1.1.11",
     "com.unity.textmeshpro": "2.0.1",
-    "com.unity.timeline": "1.2.10",
+    "com.unity.timeline": "1.2.12",
     "com.unity.ugui": "1.0.0",
-    "io.github.jonasdem.entityselection": "file:C:/Workspace/EntitySelection",
+    "io.github.jonasdem.entityselection": "https://github.com/JonasDeM/EntitySelection.git",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
     "com.unity.modules.animation": "1.0.0",
@@ -44,5 +44,11 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0"
+  },
+  "lock": {
+    "io.github.jonasdem.entityselection": {
+      "revision": "HEAD",
+      "hash": "9935a6aaaaa591067232d27c2df2f9a06a2f558f"
+    }
   }
 }

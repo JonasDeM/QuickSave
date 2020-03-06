@@ -16,9 +16,12 @@ namespace DotsPersistency
     {
         public PersistencyManager PersistencyManager;
         private EntityCommandBufferSystem _ecbSystem;
+        
 
         protected override void OnCreate()
         {
+            InitializeReadWrite(RuntimePersistableTypesInfo.Load());
+            
             PersistencyManager = new PersistencyManager();
             _ecbSystem = World.GetOrCreateSystem<EndInitializationEntityCommandBufferSystem>();
         }

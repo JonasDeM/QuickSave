@@ -12,7 +12,7 @@ namespace DotsPersistency.Hybrid
     [RequiresEntityConversion]
     public class PersistencyAuthoring : MonoBehaviour
     {
-        public List<ulong> TypesToPersistHashes= new List<ulong>();
+        public List<ulong> TypesToPersistHashes = new List<ulong>();
 
         public PersistedTypes GetPersistedTypes()
         {
