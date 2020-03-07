@@ -26,7 +26,7 @@ namespace DotsPersistency
         {
             if (Input.GetKeyDown(KeyCode.W))
             {
-                return _fromSystem.PersistencyManager.ScheduleToPersistentDataJobs(this, inputDependencies);
+                //return _fromSystem.PersistencyManager.ScheduleToPersistentDataJobs(this, inputDependencies);
             }
 
             if (Input.GetKeyDown(KeyCode.D))

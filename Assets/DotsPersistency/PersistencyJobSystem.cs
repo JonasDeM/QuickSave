@@ -49,7 +49,7 @@ namespace DotsPersistency
             {
                 All = new[]
                 {
-                    ComponentType.ReadOnly<PersistedTypes>(),
+                    ComponentType.ReadOnly<PersistenceArchetype>(),
                     ComponentType.ReadOnly<PersistenceState>(),
                     ComponentType.ReadOnly<SceneSection>(),
                     persistedType
@@ -67,7 +67,7 @@ namespace DotsPersistency
             {
                 All = new[]
                 {
-                    ComponentType.ReadOnly<PersistedTypes>(),
+                    ComponentType.ReadOnly<PersistenceArchetype>(),
                     ComponentType.ReadOnly<PersistenceState>(),
                     ComponentType.ReadOnly<SceneSection>()
                 },

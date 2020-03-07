@@ -36,7 +36,7 @@ namespace DotsPersistency
     {
         public EntityCommandBuffer.Concurrent Ecb;
         public SceneSection SceneSection;
-        public PersistedTypes PersistedTypes;
+        public PersistenceArchetype PersistenceArchetype;
         [ReadOnly]
         public NativeArray<bool>  EntityFoundArray; // whether the entity existed at time of persisting
         
@@ -81,7 +81,7 @@ namespace DotsPersistency
                 Ecb.AddComponent<PersistenceState>(index, entity);
                 Ecb.SetComponent(index, entity, persistenceState);
                 Ecb.AddSharedComponent(index, entity, SceneSection);
-                Ecb.AddSharedComponent(index, entity, PersistedTypes);
+                Ecb.AddSharedComponent(index, entity, PersistenceArchetype);
             }
         }
     }
