@@ -1,9 +1,11 @@
 ﻿// Author: Jonas De Maeseneer
 
+using System.Runtime.CompilerServices;
 using System;
-using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Entities;
+
+[assembly:InternalsVisibleTo("io.jonasdem.dotspersistency.hybrid")]
 
 namespace DotsPersistency
 {
@@ -17,9 +19,14 @@ namespace DotsPersistency
         public int ArchetypeIndex; // Index specifically for this SceneSection
         public int SizePerEntity;
         
-        // Todo optimization during runtime we should have mapped these to indices
+        // todo remove
         public FixedList128<ulong> ComponentDataTypeHashList; // can store 15 type hashes
         public FixedList64<ulong> BufferElementTypeHashList; // can store 7 type hashes
+    }
+    
+    public struct TypeHashesToPersist : ISharedComponentData
+    {
+        public FixedList128<ulong> TypeHashList; // can store 15 type hashes
     }
 
     public struct PersistedTypeInfo
@@ -32,8 +39,8 @@ namespace DotsPersistency
     }
     
     // A persisting entity needs this component
-    // It holds the index into the arrays which hold the persisted data
-    // Entities their data will reside in the same arrays if they have the same SharedComponentData for SceneSection & PersistedTypes
+    // It holds the index into the sub array that holds the persisted data
+    // Entities their data will reside in the same arrays if they have the same SharedComponentData for SceneSection & PersistenceArchetype
     public struct PersistenceState : IComponentData, IEquatable<PersistenceState>
     {
         public int ArrayIndex;
@@ -44,3 +51,34 @@ namespace DotsPersistency
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

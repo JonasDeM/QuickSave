@@ -1,5 +1,5 @@
 {
-    "name": "io.jonasden.dotspersistency.hybrid",
+    "name": "io.jonasdem.dotspersistency.hybrid",
     "references": [
         "io.jonasdem.dotspersistency",
         "Unity.Entities.Hybrid",

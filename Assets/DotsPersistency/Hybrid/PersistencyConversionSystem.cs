@@ -5,60 +5,83 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Transforms;
 using UnityEngine;
 using Hash128 = Unity.Entities.Hash128;
 
 namespace DotsPersistency.Hybrid
 {
-    [ConverterVersion("Jonas", 2)]
-    [UpdateInGroup(typeof(GameObjectDeclareReferencedObjectsGroup))]
-    public class PersistencyConversionReferenceSystem : GameObjectConversionSystem
+    [UpdateInGroup(typeof(GameObjectAfterConversionGroup))]
+    public class MyPersistencyConversionSystem : PersistencyConversionSystem
     {
         protected override void OnUpdate()
         {
-            Entities.ForEach((PersistencyAuthoring persistencyAuthoring)
-                =>
-            {
-                Entities.ForEach((PersistencyAuthoring other)
-                    =>
-                {
-                    if (persistencyAuthoring != other)
-                    {
-                        DeclareDependency(persistencyAuthoring, other);
-                    }
-                });
-            });
+            Convert();
         }
     }
 
-    [ConverterVersion("Jonas", 10)]
     [UpdateInGroup(typeof(GameObjectAfterConversionGroup))]
-    public class PersistencyConversionSystem : GameObjectConversionSystem
+    public abstract class PersistencyConversionSystem : GameObjectConversionSystem
     {
-        protected override void OnUpdate()
+        protected void Convert()
         {
-            var hashMap = new NativeHashMap<Hash128, PersistenceArchetype>(8, Allocator.Temp);
-            
+            List<SceneSection> sections = new List<SceneSection>();
+            DstEntityManager.GetAllUniqueSharedComponentData(sections);
+            var sceneGUID = sections.Select(section => section.SceneGUID).First(guid => guid != new Hash128());
+
+            Entities.ForEach((PersistencyAuthoring persistencyAuthoring) =>
+            {
+                Entity e = GetPrimaryEntity(persistencyAuthoring);
+                DstEntityManager.AddSharedComponentData(e, new TypeHashesToPersist()
+                {
+                    TypeHashList = persistencyAuthoring.GetPersistingTypeHashes()
+                });
+                DstEntityManager.AddComponentData(e, new PersistenceState()
+                {
+                    ArrayIndex = persistencyAuthoring.CalculateArrayIndex()
+                });
+            });
+        }
+
+        // Don't use this unless you know what consequences it has
+        // This only works with a non-incremental convert:
+        // This conversion would need to do a non-incremental convert every time:
+        //                                      - 1 type is changed
+        //                                      - 1 PersistencyAuthoring is moved in the hierarchy
+        // For this to be able to be used during development I would need to find a way to disable incremental convert for PersistencyAuthoring & make this conversion depend on the types the type hashes represent
+        // Currently this could be used as a potential optimization before a release build, you can then also leave out any call to PersistenceArchetypeSystem.RequestInitSceneSection
+        protected void ConvertExperimental()
+        {
+            var hashMap = new NativeHashMap<Hash128, PersistenceArchetype>();
+
             CreatePersistenceArchetypes(hashMap);
-            AddComponents(hashMap);
+            
+            Entities.ForEach((PersistencyAuthoring persistencyAuthoring) =>
+            {
+                Entity e = GetPrimaryEntity(persistencyAuthoring);
+                DstEntityManager.AddSharedComponentData(e, hashMap[persistencyAuthoring.GetStablePersistenceArchetypeHash()]);
+                DstEntityManager.AddComponentData(e, new PersistenceState()
+                {
+                    ArrayIndex = persistencyAuthoring.CalculateArrayIndex()
+                });
+            });
 
             hashMap.Dispose();
         }
-
+        
         private void CreatePersistenceArchetypes(NativeHashMap<Hash128, PersistenceArchetype> hashMap)
         {
             int archetypeIndex = 0;
-
-            var hashToStableTypeHashes = new Dictionary<Hash128, List<ulong>>(8);
+            var hashToStableTypeHashes = new Dictionary<Hash128, FixedList128<ulong>>(8);
+            
+            List<SceneSection> sections = new List<SceneSection>();
+            DstEntityManager.GetAllUniqueSharedComponentData(sections);
+            var sceneGUID = sections.Select(section => section.SceneGUID).First(guid => guid != new Hash128());
             
             // Phase 1: Calculate PersistenceArchetypeIndices & Amount Entities per PersistenceArchetype
-            Entities.ForEach((PersistencyAuthoring persistencyAuthoring)
-                =>
+            Entities.ForEach((PersistencyAuthoring persistencyAuthoring) =>
             {
                 var persistenceArchetypeHash = persistencyAuthoring.GetStablePersistenceArchetypeHash();
-                PersistenceArchetype persistenceArchetype;
-                if (!hashMap.TryGetValue(persistenceArchetypeHash, out persistenceArchetype))
+                if (!hashMap.TryGetValue(persistenceArchetypeHash, out var persistenceArchetype))
                 {
                     persistenceArchetype = new PersistenceArchetype()
                     {
@@ -70,7 +93,7 @@ namespace DotsPersistency.Hybrid
                     };
                     archetypeIndex++;
                     hashMap.Add(persistenceArchetypeHash, persistenceArchetype);
-                    hashToStableTypeHashes.Add(persistenceArchetypeHash, persistencyAuthoring.FilteredTypesToPersistHashes);
+                    hashToStableTypeHashes.Add(persistenceArchetypeHash, persistencyAuthoring.GetPersistingTypeHashes());
                 }
 
                 persistenceArchetype.Amount += 1;
@@ -84,7 +107,7 @@ namespace DotsPersistency.Hybrid
             {
                 var archetypeToUpdate = hashMap[keyToUpdate];
 
-                archetypeToUpdate.PersistedTypeInfoArrayRef = BuildTypeInfoBlobAsset(hashToStableTypeHashes[keyToUpdate], archetypeToUpdate.Amount, out int sizePerEntity);
+                archetypeToUpdate.PersistedTypeInfoArrayRef = PersistenceArchetypeSystem.BuildTypeInfoBlobAsset(hashToStableTypeHashes[keyToUpdate], archetypeToUpdate.Amount, out int sizePerEntity);
                 archetypeToUpdate.SizePerEntity = sizePerEntity;
                 
                 hashMap[keyToUpdate] = archetypeToUpdate;
@@ -107,56 +130,6 @@ namespace DotsPersistency.Hybrid
 
                 hashMap[keyToUpdate] = archetypeToUpdate;
             }
-        }
-        
-        
-        private void AddComponents(NativeHashMap<Hash128, PersistenceArchetype> hashMap)
-        {
-            Entities.ForEach((PersistencyAuthoring persistencyAuthoring)
-                =>
-            {
-                Entity e = GetPrimaryEntity(persistencyAuthoring);
-                DstEntityManager.AddSharedComponentData(e, hashMap[persistencyAuthoring.GetStablePersistenceArchetypeHash()]);
-                DstEntityManager.AddComponentData(e, new PersistenceState()
-                {
-                    ArrayIndex = persistencyAuthoring.CalculateArrayIndex()
-                });
-            });
-        }
-        
-        BlobAssetReference<BlobArray<PersistedTypeInfo>> BuildTypeInfoBlobAsset(List<ulong> stableTypeHashes, int amountEntities, out int sizePerEntity)
-        {
-            BlobAssetReference<BlobArray<PersistedTypeInfo>> blobAssetReference;
-            int currentOffset = 0;
-            sizePerEntity = 0;
-
-            using (BlobBuilder blobBuilder = new BlobBuilder(Allocator.Temp))
-            {
-                ref BlobArray<PersistedTypeInfo> blobArray = ref blobBuilder.ConstructRoot<BlobArray<PersistedTypeInfo>>();
-
-                var blobBuilderArray = blobBuilder.Allocate(ref blobArray, stableTypeHashes.Count);
-
-                for (int i = 0; i < blobBuilderArray.Length; i++)
-                {
-                    var typeInfo = TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(stableTypeHashes[i]));
-
-                    int maxElements = typeInfo.Category == TypeManager.TypeCategory.BufferData ? typeInfo.BufferCapacity : 1;
-                    blobBuilderArray[i] = new PersistedTypeInfo()
-                    {
-                        StableHash = stableTypeHashes[i],
-                        ElementSize = typeInfo.ElementSize,
-                        IsBuffer = typeInfo.Category == TypeManager.TypeCategory.BufferData,
-                        MaxElements = maxElements,
-                        Offset = currentOffset
-                    };
-                    sizePerEntity += typeInfo.ElementSize * maxElements;
-                    currentOffset += typeInfo.ElementSize * maxElements * amountEntities;
-                }
-
-                blobAssetReference = blobBuilder.CreateBlobAssetReference<BlobArray<PersistedTypeInfo>>(Allocator.Persistent);
-            }
-            
-            return blobAssetReference;
         }
     }
 }

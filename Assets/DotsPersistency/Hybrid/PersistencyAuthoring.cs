@@ -16,8 +16,6 @@ namespace DotsPersistency.Hybrid
     public class PersistencyAuthoring : MonoBehaviour
     {
         public List<ulong> TypesToPersistHashes = new List<ulong>();
-        
-        public List<ulong> FilteredTypesToPersistHashes => TypesToPersistHashes.Where(hash => hash != 0).ToList();
 
         // todo remove
         public FixedList128<ulong> GetComponentDataTypesToPersistHashes()
@@ -49,6 +47,17 @@ namespace DotsPersistency.Hybrid
             return retVal;
         }
         
+        public FixedList128<ulong> GetPersistingTypeHashes()
+        {
+            var retVal = new FixedList128<ulong>();
+            Debug.Assert(TypesToPersistHashes.Count <= retVal.Capacity, $"more than {retVal.Capacity} persisted ComponentData types is not supported");
+            foreach (var hash in TypesToPersistHashes)
+            {
+                retVal.Add(hash); 
+            }
+            return retVal;
+        }
+
         public Hash128 GetStablePersistenceArchetypeHash()
         {
             ulong hash1 = 0;
@@ -85,7 +94,6 @@ namespace DotsPersistency.Hybrid
                 rootParent = rootParent.parent;
             }
             int arrayIndex = 0;
-            int archetypeIndex = 0;
             
             foreach (GameObject rootGameObject in gameObject.scene.GetRootGameObjects())
             {
