@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using UnityEngine;
 
@@ -62,13 +63,13 @@ namespace DotsPersistency
                 EntityManager.RemoveComponent<TypeHashesToPersist>(_query);
             }
         }
-        
+
         internal static BlobAssetReference<BlobArray<PersistedTypeInfo>> BuildTypeInfoBlobAsset(FixedList128<ulong> stableTypeHashes, int amountEntities, out int sizePerEntity)
         {
             BlobAssetReference<BlobArray<PersistedTypeInfo>> blobAssetReference;
             int currentOffset = 0;
             sizePerEntity = 0;
-
+            
             using (BlobBuilder blobBuilder = new BlobBuilder(Allocator.Temp))
             {
                 ref BlobArray<PersistedTypeInfo> blobArray = ref blobBuilder.ConstructRoot<BlobArray<PersistedTypeInfo>>();
@@ -88,7 +89,7 @@ namespace DotsPersistency
                         MaxElements = maxElements,
                         Offset = currentOffset
                     };
-                    sizePerEntity += typeInfo.ElementSize * maxElements; // todo reserve space 
+                    sizePerEntity += typeInfo.ElementSize * maxElements + sizeof(ushort); // PersistenceMetaData is one ushort
                     currentOffset += sizePerEntity * amountEntities;
                 }
 

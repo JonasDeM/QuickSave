@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System;
 using Unity.Collections;
 using Unity.Entities;
+using UnityEngine;
 
 [assembly:InternalsVisibleTo("io.jonasdem.dotspersistency.hybrid")]
 
@@ -49,6 +50,28 @@ namespace DotsPersistency
         {
             return ArrayIndex == other.ArrayIndex;
         }
+    }
+    
+    // This struct sits in front of every data block in the persisted data array
+    public struct PersistenceMetaData
+    {
+        public ushort Data;
+
+        public PersistenceMetaData(int diff, ushort amount)
+        {
+            Debug.Assert(amount <= MaxValueForAmount);
+            Data = amount;
+            if (diff != 0)
+            {
+                Data |= 1 << 15;
+            }
+        }
+
+        public bool HasChanged => (Data & ~MaxValueForAmount) != 0;
+        public int AmountFound => Data & MaxValueForAmount;
+        public bool FoundOne => AmountFound != 0;
+        public const ushort MaxValueForAmount = 0x7FFF; // 0111 1111 1111 1111
+        public const int SizeOfStruct = sizeof(ushort);
     }
 }
 
