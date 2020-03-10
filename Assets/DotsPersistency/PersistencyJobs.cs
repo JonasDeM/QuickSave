@@ -40,7 +40,7 @@ namespace DotsPersistency
                 
                 // Diff
                 int diff = outputMetaDataBytePtr->AmountFound - amountFound;
-                diff |= UnsafeUtility.MemCmp(outputDataBytePtr, compDataBytePtr, totalElementSize);
+                diff |= UnsafeUtility.MemCmp(outputDataBytePtr, compDataBytePtr, TypeSize);
                 
                 // Write Meta Data
                 *outputMetaDataBytePtr = new PersistenceMetaData(diff, amountFound); // 1 branch in this constructor

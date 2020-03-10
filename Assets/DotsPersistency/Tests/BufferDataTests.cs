@@ -34,6 +34,16 @@ namespace DotsPersistency.Tests
             var query1 = m_Manager.CreateEntityQuery(typeof(PersistentDynamicBufferData1), typeof(PersistenceState));
             var query2 = m_Manager.CreateEntityQuery(typeof(PersistentDynamicBufferData2), typeof(PersistenceState));
             var query3 = m_Manager.CreateEntityQuery(typeof(PersistentDynamicBufferData3), typeof(PersistenceState));
+
+            const int deletedIndex = 5;
+            Entities.WithAll<PersistenceState>().ForEach(entity =>
+            {
+                int index = m_Manager.GetComponentData<PersistenceState>(entity).ArrayIndex;
+                if (index == deletedIndex)
+                {
+                    m_Manager.DestroyEntity(entity);
+                }
+            });
             
             // Action
             var job1 = new CopyBufferElementsToByteArray()
@@ -76,6 +86,7 @@ namespace DotsPersistency.Tests
                 var dataPtr = (PersistentDynamicBufferData1*)(metaDataPtr + 1);
                 
                 Assert.AreEqual(originalData.Length, metaDataPtr->AmountFound, "CopyBufferElementsToByteArray returned the wrong amount persisted.");
+                Assert.True(metaDataPtr->HasChanged, "CopyBufferElementsToByteArray did not record a change when it should have.");
 
                 for (var i = 0; i < originalData.Length; i++)
                 {
@@ -97,6 +108,8 @@ namespace DotsPersistency.Tests
                 var dataPtr = (PersistentDynamicBufferData2*)(metaDataPtr + 1);
                 
                 Assert.AreEqual(originalData.Length, metaDataPtr->AmountFound, "CopyBufferElementsToByteArray returned the wrong amount persisted.");
+                // this query only has empty buffers
+                Assert.False(metaDataPtr->HasChanged, "CopyBufferElementsToByteArray recorded a change while it should not have.");
 
                 for (var i = 0; i < originalData.Length; i++)
                 {
@@ -118,6 +131,7 @@ namespace DotsPersistency.Tests
                 var dataPtr = (PersistentDynamicBufferData3*)(metaDataPtr + 1);
                 
                 Assert.AreEqual(Mathf.Clamp(originalData.Length, 0, maxElements), metaDataPtr->AmountFound, "CopyBufferElementsToByteArray returned the wrong amount persisted.");
+                Assert.True(metaDataPtr->HasChanged, "CopyBufferElementsToByteArray did not record a change when it should have.");
 
                 for (var i = 0; i < originalData.Length; i++)
                 {
@@ -128,6 +142,27 @@ namespace DotsPersistency.Tests
                     }
                 }
             });
+
+            int stride1 = (maxElements * UnsafeUtility.SizeOf<PersistentDynamicBufferData1>() + PersistenceMetaData.SizeOfStruct);
+            if (array1Data.Length >= stride1 * deletedIndex)
+            {
+                bool hasChanged = UnsafeUtility.ReadArrayElementWithStride<PersistenceMetaData>(array1Data.GetUnsafeReadOnlyPtr(), deletedIndex, stride1).HasChanged;
+                Assert.False(hasChanged, "CopyBufferElementsToByteArray recorded a change while it should not have.");
+            }
+            
+            int stride2 = (maxElements * UnsafeUtility.SizeOf<PersistentDynamicBufferData2>() + PersistenceMetaData.SizeOfStruct);
+            if (array2Data.Length >= stride2 * deletedIndex)
+            {
+                bool hasChanged = UnsafeUtility.ReadArrayElementWithStride<PersistenceMetaData>(array2Data.GetUnsafeReadOnlyPtr(), deletedIndex, stride2).HasChanged;
+                Assert.False(hasChanged, "CopyBufferElementsToByteArray recorded a change while it should not have.");
+            }
+            
+            int stride3 = (maxElements * UnsafeUtility.SizeOf<PersistentDynamicBufferData3>() + PersistenceMetaData.SizeOfStruct);
+            if (array3Data.Length >= stride3 * deletedIndex)
+            {
+                bool hasChanged = UnsafeUtility.ReadArrayElementWithStride<PersistenceMetaData>(array3Data.GetUnsafeReadOnlyPtr(), deletedIndex, stride3).HasChanged;
+                Assert.False(hasChanged, "CopyBufferElementsToByteArray recorded a change while it should not have.");
+            }
 
             // Cleanup
             array1Data.Dispose();

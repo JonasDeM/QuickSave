@@ -77,7 +77,6 @@ namespace DotsPersistency.Tests
                 int byteIndex = persistenceState.ArrayIndex * (UnsafeUtility.SizeOf<EcsPersistingTestData>() + PersistenceMetaData.SizeOfStruct) + PersistenceMetaData.SizeOfStruct;
                 var copiedData = *(EcsPersistingTestData*)((byte*)array1IntData.GetUnsafeReadOnlyPtr() + byteIndex);
                 Assert.True(originalData.Equals(copiedData), "Data output by CopyComponentDataToByteArray does not match data on entity.");
-                Debug.Log(copiedData.data.value);
             });
             
             Entities.With(query2).ForEach(entity =>
@@ -87,7 +86,6 @@ namespace DotsPersistency.Tests
                 int byteIndex = persistenceState.ArrayIndex * (UnsafeUtility.SizeOf<EcsPersistingFloatTestData2>() + PersistenceMetaData.SizeOfStruct) + PersistenceMetaData.SizeOfStruct;
                 var copiedData = *(EcsPersistingFloatTestData2*)((byte*)array2FloatData.GetUnsafeReadOnlyPtr() + byteIndex);
                 Assert.True(originalData.Equals(copiedData), "Data output by CopyComponentDataToByteArray does not match data on entity.");
-                Debug.Log(copiedData.data.Value1);
             });
             
             Entities.With(query3).ForEach(entity =>
@@ -97,7 +95,6 @@ namespace DotsPersistency.Tests
                 int byteIndex = persistenceState.ArrayIndex * (UnsafeUtility.SizeOf<EcsPersistingTestData5>() + PersistenceMetaData.SizeOfStruct) + PersistenceMetaData.SizeOfStruct;
                 var copiedData = *(EcsPersistingTestData5*)((byte*)array5IntData.GetUnsafeReadOnlyPtr() + byteIndex);
                 Assert.True(originalData.Equals(copiedData), "Data output by CopyComponentDataToByteArray does not match data on entity.");
-                Debug.Log(copiedData.data.value4);
             });
             
             for (int i = 0; i < entityAmount1; i++)

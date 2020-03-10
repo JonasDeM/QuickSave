@@ -10,6 +10,26 @@ using Hash128 = Unity.Entities.Hash128;
 
 namespace DotsPersistency.Hybrid
 {
+    [ConverterVersion("Jonas", 3)]
+    [UpdateInGroup(typeof(GameObjectDeclareReferencedObjectsGroup))]
+    public class PersistencyConversionReferenceSystem : GameObjectConversionSystem
+    {
+        protected override void OnUpdate()
+        {
+            Entities.ForEach((PersistencyAuthoring persistencyAuthoring) =>
+            {
+                Entities.ForEach((PersistencyAuthoring other) =>
+                {
+                    if (persistencyAuthoring.GetStablePersistenceArchetypeHash() == other.GetStablePersistenceArchetypeHash()
+                        && persistencyAuthoring != other)
+                    {
+                        DeclareDependency(persistencyAuthoring, other);
+                    }
+                });
+            });
+        }
+    }
+    
     [UpdateInGroup(typeof(GameObjectAfterConversionGroup))]
     public class MyPersistencyConversionSystem : PersistencyConversionSystem
     {
@@ -45,8 +65,8 @@ namespace DotsPersistency.Hybrid
         // Don't use this unless you know what consequences it has
         // This only works with a non-incremental convert:
         // This conversion would need to do a non-incremental convert every time:
-        //                                      - 1 type is changed
-        //                                      - 1 PersistencyAuthoring is moved in the hierarchy
+        //                                      - 1 type is changed (Not yet found a way on how to achieve this)
+        //                                      - 1 PersistencyAuthoring is moved in the hierarchy (Just make every PersistencyAuthoring depend on each other)
         // For this to be able to be used during development I would need to find a way to disable incremental convert for PersistencyAuthoring & make this conversion depend on the types the type hashes represent
         // Currently this could be used as a potential optimization before a release build, you can then also leave out any call to PersistenceArchetypeSystem.RequestInitSceneSection
         protected void ConvertExperimental()

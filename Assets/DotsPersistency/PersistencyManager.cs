@@ -16,10 +16,10 @@ namespace DotsPersistency
 {
     public class PersistencyManager : IDisposable
     {
-        List<PersistentDataStorage> GetDataForSceneSection(SceneSection sceneSection)
+        PersistentDataStorage GetDataForSceneSection(SceneSection sceneSection)
         {
             // load from somewhere
-            return new List<PersistentDataStorage>();
+            return new PersistentDataStorage();
         }
         void SetDataForSceneSection(SceneSection sceneSection, List<PersistentDataStorage> data)
         {
@@ -216,75 +216,31 @@ namespace DotsPersistency
         
         public struct PersistentDataStorage : IDisposable
         {
-            
-            public struct DataAndFound : IDisposable
+            private NativeArray<byte> _data;
+
+            public List<PersistenceArchetype> PersistenceArchetype => _persistenceArchetypes;
+            private List<PersistenceArchetype> _persistenceArchetypes;
+
+            public PersistentDataStorage(Unity.Entities.Hash128 sceneGUID, List<PersistenceArchetype> persistenceArchetypes, Allocator allocator)
             {
-                // note that you can't use the same index, Found can be indexed normally, but for Data you need to multiply by TypeSize
-                public NativeArray<bool> Found;
-                public NativeArray<byte> Data;
+                _persistenceArchetypes = persistenceArchetypes;
 
-                public NativeArray<int> GetFoundAmountForBuffers()
+                int size = 0;
+                foreach (var persistenceArchetype in persistenceArchetypes)
                 {
-                    return Found.Reinterpret<int>(1);
+                    size += persistenceArchetype.Amount * persistenceArchetype.SizePerEntity;
                 }
-                
-                public void Dispose()
-                {
-                    Data.Dispose();
-                    Found.Dispose();
-                }
-            }
-            
-            
-            // Todo optimization make this 1 big array to index in
-            private Dictionary<ulong, DataAndFound> _typeToData;
-
-            public PersistenceArchetype PersistenceArchetype => _persistenceArchetype;
-            private PersistenceArchetype _persistenceArchetype;
-
-            public PersistentDataStorage(int count, PersistenceArchetype persistenceArchetype)
-            {
-                _persistenceArchetype = persistenceArchetype;
-                _typeToData = new Dictionary<ulong, DataAndFound>(persistenceArchetype.ComponentDataTypeHashList.Length + persistenceArchetype.BufferElementTypeHashList.Length);
-                foreach (var hash in persistenceArchetype.ComponentDataTypeHashList)
-                {
-                    var typeInfo = TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(hash));
-                    var typeSize = typeInfo.ElementSize;
-                    _typeToData[hash] = new DataAndFound
-                    {
-                        Data = new NativeArray<byte>(typeSize * count, Allocator.Persistent),
-                        Found = new NativeArray<bool>(count, Allocator.Persistent)
-                    };
-                }
-                foreach (var hash in persistenceArchetype.BufferElementTypeHashList)
-                {
-                    var typeInfo = TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(hash));
-                    var typeSize = typeInfo.ElementSize;
-                    int amountElements = typeInfo.BufferCapacity;
-                    _typeToData[hash] = new DataAndFound
-                    {
-                        Data = new NativeArray<byte>(typeSize * amountElements * count, Allocator.Persistent),
-                        Found = new NativeArray<bool>( count * sizeof(int) / sizeof(bool), Allocator.Persistent)
-                    };
-                }
-            }
-
-            public DataAndFound GetDataAndFoundArrays(ulong typeHash)
-            {
-                return _typeToData[typeHash];
+                _data = new NativeArray<byte>(size, allocator);
             }
 
             public void Dispose()
             {
-                foreach (var value in _typeToData.Values)
-                {
-                    value.Dispose();
-                }
+                _data.Dispose();
             }
-
-            public PersistenceArchetype GetPersistedTypes()
+            
+            public void Dispose(JobHandle jobHandle)
             {
-                throw new NotImplementedException();
+                _data.Dispose(jobHandle);
             }
         }
 
