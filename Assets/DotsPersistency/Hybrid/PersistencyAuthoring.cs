@@ -17,36 +17,6 @@ namespace DotsPersistency.Hybrid
     {
         public List<ulong> TypesToPersistHashes = new List<ulong>();
 
-        // todo remove
-        public FixedList128<ulong> GetComponentDataTypesToPersistHashes()
-        {
-            var retVal = new FixedList128<ulong>();
-            Debug.Assert(TypesToPersistHashes.Count <= retVal.Capacity, $"more than {retVal.Capacity} persisted ComponentData types is not supported");
-            foreach (var hash in TypesToPersistHashes)
-            {
-                if (hash != 0 && TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(hash)).Category == TypeManager.TypeCategory.ComponentData)
-                {
-                    retVal.Add(hash); 
-                }
-            }
-            return retVal;
-        }
-        
-        // todo remove
-        public FixedList64<ulong> GetBufferDataTypesToPersistHashes()
-        {
-            var retVal = new FixedList64<ulong>();
-            Debug.Assert(TypesToPersistHashes.Count <= retVal.Capacity, $"more than {retVal.Capacity} persisted BufferData types is not supported");
-            foreach (var hash in TypesToPersistHashes)
-            {
-                if (hash != 0 && TypeManager.GetTypeInfo(TypeManager.GetTypeIndexFromStableTypeHash(hash)).Category == TypeManager.TypeCategory.BufferData) 
-                {
-                    retVal.Add(hash);
-                }
-            }
-            return retVal;
-        }
-        
         public FixedList128<ulong> GetPersistingTypeHashes()
         {
             var retVal = new FixedList128<ulong>();

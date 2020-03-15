@@ -1,11 +1,9 @@
 ﻿// Author: Jonas De Maeseneer
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
 using Hash128 = Unity.Entities.Hash128;
 
 namespace DotsPersistency.Hybrid
@@ -106,10 +104,7 @@ namespace DotsPersistency.Hybrid
                     persistenceArchetype = new PersistenceArchetype()
                     {
                         Amount = 0,
-                        ArchetypeIndex = archetypeIndex,
-                        // todo remove
-                        ComponentDataTypeHashList = persistencyAuthoring.GetComponentDataTypesToPersistHashes(),
-                        BufferElementTypeHashList = persistencyAuthoring.GetBufferDataTypesToPersistHashes()
+                        ArchetypeIndex = archetypeIndex
                     };
                     archetypeIndex++;
                     hashMap.Add(persistenceArchetypeHash, persistenceArchetype);
@@ -127,7 +122,7 @@ namespace DotsPersistency.Hybrid
             {
                 var archetypeToUpdate = hashMap[keyToUpdate];
 
-                archetypeToUpdate.PersistedTypeInfoArrayRef = PersistenceArchetypeSystem.BuildTypeInfoBlobAsset(hashToStableTypeHashes[keyToUpdate], archetypeToUpdate.Amount, out int sizePerEntity);
+                archetypeToUpdate.PersistedTypeInfoArrayRef = PersistenceInitializationSystem.BuildTypeInfoBlobAsset(hashToStableTypeHashes[keyToUpdate], archetypeToUpdate.Amount, out int sizePerEntity);
                 archetypeToUpdate.SizePerEntity = sizePerEntity;
                 
                 hashMap[keyToUpdate] = archetypeToUpdate;

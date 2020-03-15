@@ -60,7 +60,7 @@ namespace DotsPersistency
         [ReadOnly] 
         public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
         [ReadOnly]
-        public NativeArray<byte> Input;
+        public NativeArray<byte> InputData;
             
         public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
         {
@@ -72,7 +72,7 @@ namespace DotsPersistency
             for (int i = 0; i < persistenceStateArray.Length; i++)
             {
                 PersistenceState persistenceState = persistenceStateArray[i];
-                byte* inputDataPtr = (byte*)Input.GetUnsafeReadOnlyPtr() + (persistenceState.ArrayIndex * totalElementSize + PersistenceMetaData.SizeOfStruct);
+                byte* inputDataPtr = (byte*)InputData.GetUnsafeReadOnlyPtr() + (persistenceState.ArrayIndex * totalElementSize + PersistenceMetaData.SizeOfStruct);
                 byte* compDataBytePtr =(byte*)byteArray.GetUnsafePtr() + (i * TypeSize);
                 
                 // Write Data
@@ -92,7 +92,8 @@ namespace DotsPersistency
         
         public void Execute(Entity entity, int index, [ReadOnly] ref PersistenceState persistenceState)
         {
-            var metaData = UnsafeUtility.ReadArrayElementWithStride<PersistenceMetaData>(InputData.GetUnsafePtr(), persistenceState.ArrayIndex, TypeSize + PersistenceMetaData.SizeOfStruct);
+            int stride = TypeSize + PersistenceMetaData.SizeOfStruct;
+            var metaData = UnsafeUtility.ReadArrayElementWithStride<PersistenceMetaData>(InputData.GetUnsafePtr(), persistenceState.ArrayIndex, stride);
             if (metaData.AmountFound == 0)
             {
                 Ecb.RemoveComponent(index, entity, ComponentType);

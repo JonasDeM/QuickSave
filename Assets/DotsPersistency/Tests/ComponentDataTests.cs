@@ -193,7 +193,7 @@ namespace DotsPersistency.Tests
                 ChunkComponentType = m_Manager.GetArchetypeChunkComponentTypeDynamic(typeof(EcsPersistingTestData)),
                 TypeSize = UnsafeUtility.SizeOf<EcsPersistingTestData>(),
                 PersistenceStateType = m_Manager.GetArchetypeChunkComponentType<PersistenceState>(true),
-                Input = array1IntData
+                InputData = array1IntData
             }.Run(query1);
             
             new CopyByteArrayToComponentData()
@@ -201,7 +201,7 @@ namespace DotsPersistency.Tests
                 ChunkComponentType = m_Manager.GetArchetypeChunkComponentTypeDynamic(typeof(EcsPersistingFloatTestData2)),
                 TypeSize = UnsafeUtility.SizeOf<EcsPersistingFloatTestData2>(),
                 PersistenceStateType = m_Manager.GetArchetypeChunkComponentType<PersistenceState>(true),
-                Input = array2FloatData
+                InputData = array2FloatData
             }.Run(query2);
 
             new CopyByteArrayToComponentData()
@@ -209,7 +209,7 @@ namespace DotsPersistency.Tests
                 ChunkComponentType = m_Manager.GetArchetypeChunkComponentTypeDynamic(typeof(EcsPersistingTestData5)),
                 TypeSize = UnsafeUtility.SizeOf<EcsPersistingTestData5>(),
                 PersistenceStateType = m_Manager.GetArchetypeChunkComponentType<PersistenceState>(true),
-                Input = array5IntData
+                InputData = array5IntData
             }.Run(query3);
 
             // Check Results
