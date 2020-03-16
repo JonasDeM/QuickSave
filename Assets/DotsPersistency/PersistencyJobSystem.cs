@@ -177,7 +177,7 @@ namespace DotsPersistency
                         
                         JobHandle compDataJobHandle2 = new RemoveComponent()
                         {
-                            ComponentType = runtimeType,
+                            TypeToRemove = runtimeType,
                             TypeSize = typeInfo.ElementSize,
                             InputData = inputData,
                             Ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()

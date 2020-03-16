@@ -82,21 +82,30 @@ namespace DotsPersistency
     }
     
     [BurstCompile]
-    public unsafe struct RemoveComponent : IJobForEachWithEntity<PersistenceState>
+    public unsafe struct RemoveComponent : IJobChunk
     {        
-        public EntityCommandBuffer.Concurrent Ecb;
-        public ComponentType ComponentType;
+        public ComponentType TypeToRemove;
+        public int TypeSize;
         [ReadOnly, NativeDisableParallelForRestriction]
         public NativeArray<byte> InputData;
-        public int TypeSize;
-        
-        public void Execute(Entity entity, int index, [ReadOnly] ref PersistenceState persistenceState)
+
+        public EntityCommandBuffer.Concurrent Ecb;
+        public ArchetypeChunkEntityType EntityType;
+        public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
+        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
         {
-            int stride = TypeSize + PersistenceMetaData.SizeOfStruct;
-            var metaData = UnsafeUtility.ReadArrayElementWithStride<PersistenceMetaData>(InputData.GetUnsafePtr(), persistenceState.ArrayIndex, stride);
-            if (metaData.AmountFound == 0)
+            var entities = chunk.GetNativeArray(EntityType);
+            var persistenceStates = chunk.GetNativeArray(PersistenceStateType);
+            
+            for (int i = 0; i < chunk.Count; i++)
             {
-                Ecb.RemoveComponent(index, entity, ComponentType);
+                var persistenceState = persistenceStates[i];
+                int stride = TypeSize + PersistenceMetaData.SizeOfStruct;
+                var metaData = UnsafeUtility.ReadArrayElementWithStride<PersistenceMetaData>(InputData.GetUnsafePtr(), persistenceState.ArrayIndex, stride);
+                if (metaData.AmountFound == 0)
+                {
+                    Ecb.RemoveComponent(chunkIndex, entities[i], TypeToRemove);
+                }
             }
         }
     }
