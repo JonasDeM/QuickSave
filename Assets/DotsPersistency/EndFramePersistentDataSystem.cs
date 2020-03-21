@@ -12,10 +12,12 @@ namespace DotsPersistency
     {
         public PersistentDataStorage PersistentDataStorage { get; private set; }
         private EntityQuery _unloadStreamRequests;
+        private EntityCommandBufferSystem _ecbSystem;
 
         protected override void OnCreate()
         {
             InitializeReadOnly(RuntimePersistableTypesInfo.Load());
+            _ecbSystem = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
             PersistentDataStorage = World.GetOrCreateSystem<BeginFramePersistentDataSystem>().PersistentDataStorage;
 
             _unloadStreamRequests = GetEntityQuery(ComponentType.Exclude<RequestPersistentSceneLoaded>()
@@ -27,8 +29,8 @@ namespace DotsPersistency
         {
             JobHandle allPersistJobs = inputDependencies;
 
-            var sceneSectionsToUnload = _unloadStreamRequests.ToComponentDataArray<SceneSectionData>(Allocator.Temp);
-            foreach (var sceneSectionData in sceneSectionsToUnload)
+            var sceneSectionsToUnload = _unloadStreamRequests.ToComponentDataArray<SceneSectionData>(Allocator.TempJob);
+            foreach (SceneSectionData sceneSectionData in sceneSectionsToUnload)
             {
                 SceneSection sceneSectionToPersist = new SceneSection()
                 {
@@ -36,14 +38,15 @@ namespace DotsPersistency
                     SceneGUID = sceneSectionData.SceneGUID
                 };
                 
-                JobHandle.CombineDependencies(
+                allPersistJobs = JobHandle.CombineDependencies(
                     allPersistJobs,
                     ScheduleCopyToPersistentDataContainer(inputDependencies, sceneSectionToPersist, PersistentDataStorage.GetExistingContainer(sceneSectionToPersist)));
             }
             sceneSectionsToUnload.Dispose();
             
             // this will trigger the actual unload
-            EntityManager.RemoveComponent<RequestSceneLoaded>(_unloadStreamRequests);
+            _ecbSystem.CreateCommandBuffer().RemoveComponent<RequestSceneLoaded>(_unloadStreamRequests);
+            //_ecbSystem.AddJobHandleForProducer(allPersistJobs);
 
             return allPersistJobs;
         }

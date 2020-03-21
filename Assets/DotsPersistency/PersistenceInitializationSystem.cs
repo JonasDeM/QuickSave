@@ -14,7 +14,7 @@ namespace DotsPersistency
     [UpdateBefore(typeof(BeginFramePersistentDataSystem))]
     public class PersistenceInitializationSystem : ComponentSystem
     {
-        private EntityQuery _query;
+        private EntityQuery _initEntitiesQuery;
         private EntityQuery _sceneLoadedCheckQuery;
         public PersistentDataStorage PersistentDataStorage { get; private set; }
 
@@ -27,10 +27,13 @@ namespace DotsPersistency
             PersistentDataStorage = _beginFrameSystem.PersistentDataStorage;
             _sceneLoadedCheckQuery = GetEntityQuery(ComponentType.ReadOnly<SceneSection>());
             
-            _query = GetEntityQuery(new EntityQueryDesc(){ 
+            _initEntitiesQuery = GetEntityQuery(new EntityQueryDesc(){ 
                 All = new [] {ComponentType.ReadOnly<TypeHashesToPersist>(), ComponentType.ReadOnly<SceneSection>()},
                 Options = EntityQueryOptions.IncludeDisabled
             });
+            
+            RequireForUpdate(GetEntityQuery(ComponentType.ReadOnly<RequestPersistentSceneLoaded>(), ComponentType.ReadOnly<SceneSectionData>()));
+            
             _ecbSystem = World.GetOrCreateSystem<EndInitializationEntityCommandBufferSystem>();
         }
 
@@ -64,7 +67,7 @@ namespace DotsPersistency
                 {
                     requestInfo.CurrentLoadingStage = RequestPersistentSceneLoaded.Stage.WaitingForContainer;
                 }
-                if (requestInfo.CurrentLoadingStage == RequestPersistentSceneLoaded.Stage.WaitingForContainer && !PersistentDataStorage.IsWaitingForContainer())
+                if (requestInfo.CurrentLoadingStage == RequestPersistentSceneLoaded.Stage.WaitingForContainer && !PersistentDataStorage.IsWaitingForContainer(sceneSection))
                 {
                     // After the container is available actually start loading the scene
                     ecb.AddComponent(entity, new RequestSceneLoaded()
@@ -81,47 +84,59 @@ namespace DotsPersistency
 
             foreach (var sceneSection in sceneSectionsToInit)
             {
-                InitSceneSection(sceneSection, uniqueSharedCompData, ecb);
+                InitSceneSection(sceneSection, uniqueSharedCompData, PostUpdateCommands);
             }
         }
 
         private void InitSceneSection(SceneSection sceneSection, List<TypeHashesToPersist> typeHashes, EntityCommandBuffer ecb)
         {
-            int offset = 0;
-            var archetypes = new NativeArray<PersistenceArchetype>(typeHashes.Count, Allocator.Temp);
-            for (var i = 0; i < typeHashes.Count; i++)
-            {
-                var typeHashesToPersist = typeHashes[i];
-                _query.SetSharedComponentFilter(typeHashesToPersist, sceneSection);
-                int amount = _query.CalculateEntityCount();
-                if (amount <= 0) 
-                    continue;
-                
-                var persistenceArchetype = new PersistenceArchetype()
-                {
-                    Amount = _query.CalculateEntityCount(),
-                    ArchetypeIndex = i,
-                    PersistedTypeInfoArrayRef = BuildTypeInfoBlobAsset(typeHashesToPersist.TypeHashList, amount, out int sizePerEntity),
-                    SizePerEntity = sizePerEntity,
-                    Offset = offset
-                };
-                offset += amount * sizePerEntity;
-                
-                ecb.AddSharedComponent(_query, persistenceArchetype);
-                ecb.RemoveComponent<TypeHashesToPersist>(_query);
-            }
-
             if (PersistentDataStorage.HasContainer(sceneSection))
             {
+                var dataContainer = PersistentDataStorage.GetExistingContainer(sceneSection);
+                Debug.Assert(typeHashes.Count == dataContainer.Count);
+                
+                for (int i = 0; i < dataContainer.Count; i++)
+                {
+                    PersistenceArchetype archetype = dataContainer.GetPersistenceArchetypeAtIndex(i);
+                    _initEntitiesQuery.SetSharedComponentFilter(archetype.ToHashList(), sceneSection);
+                    
+                    ecb.AddSharedComponent(_initEntitiesQuery, archetype);
+                    ecb.RemoveComponent<TypeHashesToPersist>(_initEntitiesQuery);
+                }
                 _beginFrameSystem.RequestApply(sceneSection);
-            } // could do elsif PersistentDataStorage.HasDelta(sceneSection) => request persist, delta apply & apply
+            } // could do else if PersistentDataStorage.HasDelta(sceneSection) => request persist, delta apply & apply
             else
             {
+                int offset = 0;
+                var archetypes = new NativeArray<PersistenceArchetype>(typeHashes.Count, Allocator.Temp);
+                for (var i = 0; i < typeHashes.Count; i++)
+                {
+                    var typeHashesToPersist = typeHashes[i];
+                    _initEntitiesQuery.SetSharedComponentFilter(typeHashesToPersist, sceneSection);
+                    int amount = _initEntitiesQuery.CalculateEntityCount();
+                    if (amount <= 0) 
+                        continue;
+                
+                    var persistenceArchetype = new PersistenceArchetype()
+                    {
+                        Amount = _initEntitiesQuery.CalculateEntityCount(),
+                        ArchetypeIndex = i,
+                        PersistedTypeInfoArrayRef = BuildTypeInfoBlobAsset(typeHashesToPersist.TypeHashList, amount, out int sizePerEntity),
+                        SizePerEntity = sizePerEntity,
+                        Offset = offset
+                    };
+                    offset += amount * sizePerEntity;
+
+                    archetypes[i] = persistenceArchetype;
+                    ecb.AddSharedComponent(_initEntitiesQuery, persistenceArchetype);
+                    ecb.RemoveComponent<TypeHashesToPersist>(_initEntitiesQuery);
+                }
+
                 PersistentDataStorage.CreateContainer(sceneSection, archetypes);
                 _beginFrameSystem.RequestPersist(sceneSection);
+                archetypes.Dispose();
             }
 
-            archetypes.Dispose();
         }
 
         internal static BlobAssetReference<BlobArray<PersistedTypeInfo>> BuildTypeInfoBlobAsset(FixedList128<ulong> stableTypeHashes, int amountEntities, out int sizePerEntity)

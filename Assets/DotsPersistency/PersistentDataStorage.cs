@@ -56,7 +56,7 @@ namespace DotsPersistency
             return _sceneToData.ContainsKey(sceneSection);
         }
 
-        public bool IsWaitingForContainer()
+        public bool IsWaitingForContainer(SceneSection sceneSection)
         {
             // Can do an async file read & return false once it's fully read into memory
             // Can do a web request & return false once you got the data

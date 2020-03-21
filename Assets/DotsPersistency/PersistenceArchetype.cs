@@ -19,6 +19,17 @@ namespace DotsPersistency
         public int Offset; // Byte Offset in the Byte Array which contains all data for 1 SceneSection
         public int ArchetypeIndex; // Index specifically for this SceneSection
         public int SizePerEntity;
+
+        public TypeHashesToPersist ToHashList()
+        {
+            FixedList128<ulong> list = new FixedList128<ulong>();
+            for (int i = 0; i < PersistedTypeInfoArrayRef.Value.Length; i++)
+            {
+                list.Add(PersistedTypeInfoArrayRef.Value[i].StableHash);
+            }
+
+            return new TypeHashesToPersist { TypeHashList = list };
+        }
     }
     
     public struct TypeHashesToPersist : ISharedComponentData

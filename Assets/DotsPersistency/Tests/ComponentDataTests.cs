@@ -328,7 +328,76 @@ namespace DotsPersistency.Tests
             array5IntData.Dispose();
             m_Manager.DestroyEntity(m_Manager.CreateEntityQuery(typeof(PersistenceState)));
         }
-        
+
+        [Test]
+        public void TestApplyAndReadEmptyData()
+        {
+            var entity1 = m_Manager.CreateEntity(typeof(PersistenceState), typeof(EmptyEcsPersistingTestData));
+            var entity2 = m_Manager.CreateEntity(typeof(PersistenceState));
+            var entity3 = m_Manager.CreateEntity(typeof(PersistenceState), typeof(EmptyEcsPersistingTestData));
+            
+            m_Manager.SetComponentData(entity1, new PersistenceState {ArrayIndex = 0});
+            m_Manager.SetComponentData(entity2, new PersistenceState {ArrayIndex = 1});
+            m_Manager.SetComponentData(entity3, new PersistenceState {ArrayIndex = 2});
+            
+            var query = m_Manager.CreateEntityQuery(typeof(EmptyEcsPersistingTestData), typeof(PersistenceState));
+            var excludeQuery = m_Manager.CreateEntityQuery(ComponentType.Exclude<EmptyEcsPersistingTestData>(), typeof(PersistenceState));
+            var data = new NativeArray<byte>(3 * PersistenceMetaData.SizeOfStruct, Allocator.TempJob);
+
+            // Action
+            var readJob = new UpdateMetaDataForComponentTag()
+            {
+                PersistenceStateType = m_Manager.GetArchetypeChunkComponentType<PersistenceState>(true),
+                OutputData = data
+            }.Schedule(query);
+            readJob.Complete();
+
+            m_Manager.AddComponentData(entity2, new EmptyEcsPersistingTestData());
+            m_Manager.RemoveComponent<EmptyEcsPersistingTestData>(entity3);
+            
+            using (EntityCommandBuffer cmds = new EntityCommandBuffer(Allocator.TempJob))
+            {
+                var removeJob = new RemoveComponent()
+                {
+                    TypeToRemove = typeof(EmptyEcsPersistingTestData),
+                    TypeSize = TypeManager.GetTypeInfo<EmptyEcsPersistingTestData>().ElementSize,
+                    PersistenceStateType = m_Manager.GetArchetypeChunkComponentType<PersistenceState>(true),
+                    InputData = data,
+                    EntityType = m_Manager.GetArchetypeChunkEntityType(),
+                    Ecb = cmds.ToConcurrent()
+                }.Schedule(query);
+                removeJob.Complete();
+                cmds.Playback(m_Manager);
+            }
+            
+            using (EntityCommandBuffer cmds = new EntityCommandBuffer(Allocator.TempJob))
+            {
+                var addJob = new AddMissingComponent()
+                {
+                    ComponentType = typeof(EmptyEcsPersistingTestData),
+                    TypeSize = TypeManager.GetTypeInfo<EmptyEcsPersistingTestData>().ElementSize,
+                    PersistenceStateType = m_Manager.GetArchetypeChunkComponentType<PersistenceState>(true),
+                    InputData = data,
+                    EntityType = m_Manager.GetArchetypeChunkEntityType(),
+                    Ecb = cmds.ToConcurrent()
+                }.Schedule(excludeQuery);
+                addJob.Complete();
+                cmds.Playback(m_Manager);
+            }
+            
+            // Check Results
+            Assert.True(m_Manager.HasComponent<EmptyEcsPersistingTestData>(entity1), "The entity does not have the component EmptyEcsPersistingTestData BUT the entity did have the component at the time of persisting.");
+            Assert.False(m_Manager.HasComponent<EmptyEcsPersistingTestData>(entity2), "The entity has the component EmptyEcsPersistingTestData BUT the entity did not have the component at the time of persisting.");
+            Assert.True(m_Manager.HasComponent<EmptyEcsPersistingTestData>(entity3), "The entity does not have the component EmptyEcsPersistingTestData BUT the entity did have the component at the time of persisting.");
+            
+            // Cleanup
+            data.Dispose();
+        }
+
+        struct EmptyEcsPersistingTestData : IComponentData
+        {
+            
+        }
         
         struct EcsPersistingTestData : IComponentData, IEquatable<EcsTestData>, IEquatable<EcsPersistingTestData>
         {

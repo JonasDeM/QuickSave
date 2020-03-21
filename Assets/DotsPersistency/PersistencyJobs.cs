@@ -20,7 +20,7 @@ namespace DotsPersistency
         public int TypeSize;
         [ReadOnly] 
         public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
-        [WriteOnly, NativeDisableParallelForRestriction]
+        [WriteOnly, NativeDisableContainerSafetyRestriction]
         public NativeArray<byte> OutputData;
             
         public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
@@ -47,6 +47,34 @@ namespace DotsPersistency
                 
                 // Write Data
                 UnsafeUtility.MemCpy(outputDataBytePtr,compDataBytePtr, TypeSize);
+            }
+        }
+    }
+    
+    [BurstCompile]
+    public unsafe struct UpdateMetaDataForComponentTag : IJobChunk
+    {
+        [ReadOnly] 
+        public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
+        [NativeDisableContainerSafetyRestriction]
+        public NativeArray<byte> OutputData;
+            
+        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
+        {
+            var persistenceStateArray = chunk.GetNativeArray(PersistenceStateType);
+            const int amountFound = 1;
+            
+            for (int i = 0; i < persistenceStateArray.Length; i++)
+            {
+                PersistenceState persistenceState = persistenceStateArray[i];
+                var metaData = UnsafeUtility.ReadArrayElement<PersistenceMetaData>(OutputData.GetUnsafeReadOnlyPtr(), persistenceState.ArrayIndex);
+                
+                // Diff
+                int diff = metaData.AmountFound - amountFound;
+                
+                // Write Meta Data
+                // 1 branch in PersistenceMetaData constructor
+                UnsafeUtility.WriteArrayElement(OutputData.GetUnsafePtr(), persistenceState.ArrayIndex, new PersistenceMetaData(diff, amountFound));
             }
         }
     }
@@ -90,7 +118,9 @@ namespace DotsPersistency
         public NativeArray<byte> InputData;
 
         public EntityCommandBuffer.Concurrent Ecb;
+        [ReadOnly]
         public ArchetypeChunkEntityType EntityType;
+        [ReadOnly]
         public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
         public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
         {
@@ -101,7 +131,7 @@ namespace DotsPersistency
             {
                 var persistenceState = persistenceStates[i];
                 int stride = TypeSize + PersistenceMetaData.SizeOfStruct;
-                var metaData = UnsafeUtility.ReadArrayElementWithStride<PersistenceMetaData>(InputData.GetUnsafePtr(), persistenceState.ArrayIndex, stride);
+                var metaData = UnsafeUtility.ReadArrayElementWithStride<PersistenceMetaData>(InputData.GetUnsafeReadOnlyPtr(), persistenceState.ArrayIndex, stride);
                 if (metaData.AmountFound == 0)
                 {
                     Ecb.RemoveComponent(chunkIndex, entities[i], TypeToRemove);
@@ -157,7 +187,7 @@ namespace DotsPersistency
         public int MaxElements;
         [ReadOnly] 
         public ArchetypeChunkComponentType<PersistenceState> PersistenceStateType;
-        [WriteOnly, NativeDisableParallelForRestriction]
+        [NativeDisableContainerSafetyRestriction]
         public NativeArray<byte> OutputData;
             
         public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)

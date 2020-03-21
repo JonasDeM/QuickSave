@@ -9,6 +9,7 @@ using UnityEngine;
 
 namespace DotsPersistency
 {
+    [AlwaysUpdateSystem]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [UpdateAfter(typeof(SceneSystemGroup))]
     public class BeginFramePersistentDataSystem : PersistencyJobSystem
@@ -54,24 +55,25 @@ namespace DotsPersistency
             
             foreach (var sceneSection in _persistRequests)
             {
-                JobHandle.CombineDependencies(jobHandle,
+                jobHandle = JobHandle.CombineDependencies(jobHandle,
                     ScheduleCopyToPersistentDataContainer(inputDependencies, sceneSection, PersistentDataStorage.GetExistingContainer(sceneSection)));
             }
             foreach (var sceneSection in _applyRequests)
             {
-                JobHandle.CombineDependencies(jobHandle,
+                jobHandle = JobHandle.CombineDependencies(jobHandle,
                     ScheduleApplyToSceneSection(inputDependencies, sceneSection, PersistentDataStorage.GetExistingContainer(sceneSection), _ecbSystem));
             }
+            _ecbSystem.AddJobHandleForProducer(jobHandle);
 
             var persistRequests = _persistRequests;
             var applyRequests = _applyRequests;
-            jobHandle = Job.WithBurst().WithCode(() =>
+            var clearJobHandle = Job.WithBurst().WithCode(() =>
             {
                 persistRequests.Clear();
                 applyRequests.Clear();
             }).Schedule(jobHandle);
 
-            return jobHandle;
+            return JobHandle.CombineDependencies(jobHandle, clearJobHandle);
         }
     }
 }

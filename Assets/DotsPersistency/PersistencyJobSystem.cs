@@ -6,7 +6,7 @@ namespace DotsPersistency
 {
     public abstract class PersistencyJobSystem : JobComponentSystem
     {
-        private Dictionary<ComponentType, EntityQuery> _queryCache = new Dictionary<ComponentType, EntityQuery>(32);
+        private Dictionary<ComponentType, EntityQuery> _queryCache = new Dictionary<ComponentType, EntityQuery>(32, new CustomComparer());
         
         protected void InitializeReadOnly(RuntimePersistableTypesInfo typesInfo)
         {
@@ -22,13 +22,26 @@ namespace DotsPersistency
 
             foreach (ulong typeHash in typesInfo.StableTypeHashes)
             {
-                CacheQuery(ComponentType.FromTypeIndex(TypeManager.GetTypeIndexFromStableTypeHash(typeHash)));
+                ComponentType componentType = ComponentType.FromTypeIndex(TypeManager.GetTypeIndexFromStableTypeHash(typeHash));
+                ComponentType excludeComponentType = componentType;
+                excludeComponentType.AccessModeType = ComponentType.AccessMode.Exclude;
+                
+                CacheQuery(componentType);
+                CacheQuery(excludeComponentType);
             }
         }
 
         private void CacheQuery(ComponentType type)
         {
-            _queryCache.Add(type, CreatePersistenceEntityQuery(type));
+            var query = CreatePersistenceEntityQuery(type);
+            _queryCache.Add(type, query);
+            
+            // a read/write query can also be used for read only operations
+            if (type.AccessModeType == ComponentType.AccessMode.ReadWrite)
+            {
+                type.AccessModeType = ComponentType.AccessMode.ReadOnly;
+                _queryCache.Add(type, query);
+            }
         }
 
         private EntityQuery GetCachedQuery(ComponentType persistedType)
@@ -38,17 +51,37 @@ namespace DotsPersistency
         
         private EntityQuery CreatePersistenceEntityQuery(ComponentType persistedType)
         {
-            EntityQueryDesc queryDesc = new EntityQueryDesc
+            EntityQueryDesc queryDesc;
+
+            if (persistedType.AccessModeType == ComponentType.AccessMode.Exclude)
             {
-                All = new[]
+                persistedType.AccessModeType = ComponentType.AccessMode.ReadOnly;
+                queryDesc = new EntityQueryDesc
                 {
-                    ComponentType.ReadOnly<PersistenceArchetype>(),
-                    ComponentType.ReadOnly<PersistenceState>(),
-                    ComponentType.ReadOnly<SceneSection>(),
-                    persistedType
-                },
-                Options = EntityQueryOptions.IncludeDisabled
-            };
+                    All = new[]
+                    {
+                        ComponentType.ReadOnly<PersistenceArchetype>(),
+                        ComponentType.ReadOnly<PersistenceState>(),
+                        ComponentType.ReadOnly<SceneSection>()
+                    },
+                    None = new [] {persistedType},
+                    Options = EntityQueryOptions.IncludeDisabled
+                };
+            }
+            else
+            {
+                queryDesc = new EntityQueryDesc
+                {
+                    All = new[]
+                    {
+                        ComponentType.ReadOnly<PersistenceArchetype>(),
+                        ComponentType.ReadOnly<PersistenceState>(),
+                        ComponentType.ReadOnly<SceneSection>(),
+                        persistedType
+                    },
+                    Options = EntityQueryOptions.IncludeDisabled
+                };
+            }
 
             var query = GetEntityQuery(queryDesc);
             return query;
@@ -109,12 +142,20 @@ namespace DotsPersistency
                             OutputData = outputData
                         }.Schedule(query, inputDeps);
                     }
-                    else
+                    else if (typeInfo.ElementSize > 0)
                     {
                         jobHandle = new CopyComponentDataToByteArray()
                         {
                             ChunkComponentType = GetArchetypeChunkComponentTypeDynamic(runtimeType),
                             TypeSize = typeInfo.ElementSize,
+                            PersistenceStateType = persistenceStateChunkType,
+                            OutputData = outputData,
+                        }.Schedule(query, inputDeps);
+                    }
+                    else
+                    {
+                        jobHandle = new UpdateMetaDataForComponentTag()
+                        {
                             PersistenceStateType = persistenceStateChunkType,
                             OutputData = outputData
                         }.Schedule(query, inputDeps);
@@ -148,6 +189,10 @@ namespace DotsPersistency
                     // query
                     var query = GetCachedQuery(runtimeType);
                     query.SetSharedComponentFilter(sceneSection, persistenceArchetype);
+                    var excludeType = runtimeType;
+                    excludeType.AccessModeType = ComponentType.AccessMode.Exclude;
+                    var excludeQuery = GetCachedQuery(excludeType);
+                    excludeQuery.SetSharedComponentFilter(sceneSection, persistenceArchetype);
                     
                     // Grab read-only containers
                     var persistenceStateChunkType = GetArchetypeChunkComponentType<PersistenceState>(true);
@@ -167,18 +212,24 @@ namespace DotsPersistency
                     }
                     else
                     {
-                        JobHandle compDataJobHandle1 = new CopyByteArrayToComponentData()
+                        JobHandle compDataJobHandle1 = new JobHandle();
+                        if (typeInfo.ElementSize > 0)
                         {
-                            ChunkComponentType = GetArchetypeChunkComponentTypeDynamic(runtimeType),
-                            TypeSize = typeInfo.ElementSize,
-                            PersistenceStateType = persistenceStateChunkType,
-                            InputData = inputData
-                        }.Schedule(query, inputDeps);
+                            compDataJobHandle1 = new CopyByteArrayToComponentData()
+                            {
+                                ChunkComponentType = GetArchetypeChunkComponentTypeDynamic(runtimeType),
+                                TypeSize = typeInfo.ElementSize,
+                                PersistenceStateType = persistenceStateChunkType,
+                                InputData = inputData
+                            }.Schedule(query, inputDeps);
+                        }
                         
                         JobHandle compDataJobHandle2 = new RemoveComponent()
                         {
                             TypeToRemove = runtimeType,
                             TypeSize = typeInfo.ElementSize,
+                            PersistenceStateType = persistenceStateChunkType,
+                            EntityType = GetArchetypeChunkEntityType(),
                             InputData = inputData,
                             Ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()
                         }.Schedule(query, inputDeps);
@@ -191,7 +242,7 @@ namespace DotsPersistency
                             EntityType = GetArchetypeChunkEntityType(),
                             InputData = inputData,
                             Ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()
-                        }.Schedule(query, inputDeps);
+                        }.Schedule(excludeQuery, inputDeps);
                         
                         jobHandle = JobHandle.CombineDependencies(compDataJobHandle1, compDataJobHandle2, compDataJobHandle3);
                     }
@@ -200,6 +251,20 @@ namespace DotsPersistency
             }
 
             return returnJobHandle;
+        }
+        
+        // The equality/hash implementation of ComponentType does not take into account access mode type
+        private class CustomComparer : IEqualityComparer<ComponentType>
+        {
+            public bool Equals(ComponentType x, ComponentType y)
+            {
+                return x.TypeIndex == y.TypeIndex && x.AccessModeType == y.AccessModeType;
+            }
+
+            public int GetHashCode(ComponentType obj)
+            {
+                return obj.GetHashCode() * ((int)obj.AccessModeType + 11);
+            }
         }
     }
 }
