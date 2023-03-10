@@ -17,7 +17,7 @@ You can choose to save the whole state of your application (given it is in ECS),
 Here are some ideas:
 * Replay System
 * Level Reset without reloading scenes
-* World State Saving
+* World Streaming & World State Saving
 * Time-rewind Gameplay
 * User Generated Content
 * QA Testing & Bug Reproduction
