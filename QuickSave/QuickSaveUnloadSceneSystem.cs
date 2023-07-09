@@ -7,8 +7,7 @@ using Unity.Entities;
 namespace QuickSave
 {
     [BurstCompile]
-    [UpdateInGroup(typeof(PresentationSystemGroup))]
-    [UpdateBefore(typeof(QuickSaveEndFrameSystem))]
+    [UpdateInGroup(typeof(LateSimulationSystemGroup))]
     public partial struct QuickSaveUnloadSceneSystem  : ISystem
     {
         private BufferLookup<DataTransferRequest> _requestLookup;

@@ -75,7 +75,7 @@ namespace QuickSave.Editor
             if (_foldoutSettings)
             {
                 _quickSaveSettingsAsset.VerboseBakingLog = EditorGUILayout.ToggleLeft("Verbose Baking Log", _quickSaveSettingsAsset.VerboseBakingLog);
-                _quickSaveSettingsAsset.ForceUseGroupedJobsInEditor = EditorGUILayout.ToggleLeft("Force Grouped Jobs In Editor (Only Works With JobsDebugger Disabled)", _quickSaveSettingsAsset.ForceUseGroupedJobsInEditor);
+                _quickSaveSettingsAsset.ForceUseGroupedJobsInEditor = EditorGUILayout.ToggleLeft("Force Grouped Jobs In Editor (Less Safety Checks)", _quickSaveSettingsAsset.ForceUseGroupedJobsInEditor);
                 _quickSaveSettingsAsset.ForceUseNonGroupedJobsInBuild = EditorGUILayout.ToggleLeft("Force Non-Grouped Jobs In Build (Usually Slower)", _quickSaveSettingsAsset.ForceUseNonGroupedJobsInBuild);
             }
             if (EditorGUI.EndChangeCheck())

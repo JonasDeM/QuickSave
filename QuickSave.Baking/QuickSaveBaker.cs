@@ -43,18 +43,19 @@ namespace QuickSave.Baking
             
             QuickSaveSettings.Initialize(); // This needs to be here because we're in baking & it's not guaranteed to be initialized
 
+            var entity = GetEntity(TransformUsageFlags.None);
             // Add 2 uninitialized components that will get set by the baking system
-            AddComponent(new LocalIndexInContainer()
+            AddComponent(entity, new LocalIndexInContainer()
             {
                 LocalIndex = -1
             });
-            AddSharedComponent(new QuickSaveArchetypeIndexInContainer
+            AddSharedComponent(entity, new QuickSaveArchetypeIndexInContainer
             {
                 IndexInContainer = ushort.MaxValue
             });
             
             // Add the baking only components
-            var bakingOnlyBuffer = AddBuffer<QuickSaveTypeHandlesBakingOnly>();
+            var bakingOnlyBuffer = AddBuffer<QuickSaveTypeHandlesBakingOnly>(entity);
             foreach (var handle in QuickSaveSettings.GetTypeHandles(fullTypeNames, Allocator.Temp))
             {
                 bakingOnlyBuffer.Add(new QuickSaveTypeHandlesBakingOnly { QuickSaveTypeHandle = handle });
@@ -65,7 +66,7 @@ namespace QuickSave.Baking
                 var typeInfo = TypeManager.GetTypeInfo(QuickSaveSettings.GetTypeIndex(bufferElement.QuickSaveTypeHandle));
                 dataLayoutHash.Value = TypeHash.CombineFNV1A64(dataLayoutHash.Value, typeInfo.StableTypeHash);
             }
-            AddComponent(dataLayoutHash);
+            AddComponent(entity, dataLayoutHash);
         }
     }
     

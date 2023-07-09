@@ -11,6 +11,15 @@ namespace QuickSave
     public static class UntypedAccessExtensionMethods
     {
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        public static void DisableSafetyChecks(ref DynamicComponentTypeHandle chunkComponentTypeHandle)
+        {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            chunkComponentTypeHandle.m_Safety0 = AtomicSafetyHandle.Create();
+            chunkComponentTypeHandle.m_Safety1 = AtomicSafetyHandle.Create();
+#endif
+        }
+        
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
         private static void CheckZeroSizedComponentData(DynamicComponentTypeHandle chunkComponentTypeHandle)
         {
             if (Hint.Unlikely(chunkComponentTypeHandle.IsZeroSized))

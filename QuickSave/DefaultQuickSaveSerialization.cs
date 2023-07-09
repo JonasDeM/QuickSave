@@ -283,6 +283,7 @@ namespace QuickSave
 
             public void Dispose()
             {
+                AccessJobHandle.Complete();
                 SerializeRequests.Dispose();
                 CombinedDataToSerialize.Dispose();
                 DeserializeRequests.Dispose();

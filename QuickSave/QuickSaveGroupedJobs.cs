@@ -56,6 +56,7 @@ namespace QuickSave
                 
                 bool found = DynamicComponentTypeHandles.GetByTypeIndex(runtimeType.TypeIndex, out DynamicComponentTypeHandle typeHandle);
                 SafetyChecks.CheckFoundDynamicTypeHandle(found);
+                UntypedAccessExtensionMethods.DisableSafetyChecks(ref typeHandle);
 
                 if (typeInfo.IsBuffer)
                 {
@@ -128,6 +129,7 @@ namespace QuickSave
                 
                 bool found = DynamicComponentTypeHandles.GetByTypeIndex(runtimeType.TypeIndex, out DynamicComponentTypeHandle typeHandle);
                 SafetyChecks.CheckFoundDynamicTypeHandle(found);
+                UntypedAccessExtensionMethods.DisableSafetyChecks(ref typeHandle);
 
                 if (typeInfo.IsBuffer)
                 {

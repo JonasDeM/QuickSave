@@ -1,6 +1,6 @@
 {
   "name": "com.studioaurelius.quicksave",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "QuickSave",
   "description": "This Unity DOTS-related package enables you to asynchronously load and save state on entities without the need for any feature-specific code.\r\nThe highly optimized implementation makes it a solid foundation for ambitious features since it can easily run on every frame.",
   "unity": "2022.2",
@@ -10,7 +10,7 @@
     "url": "https://www.jonasdemaeseneer.com"
   },
   "dependencies": {
-    "com.unity.entities": "1.0.0-pre.15"
+    "com.unity.entities": "1.0.11"
   },
   "type": "library"
 }

@@ -5,7 +5,7 @@ using Unity.Entities;
 namespace QuickSave
 {
     [UpdateInGroup(typeof(PresentationSystemGroup))]
-    public class QuickSaveEndFrameSystem  : QuickSaveSystemBase
+    public partial class QuickSaveEndFrameSystem  : QuickSaveSystemBase
     {
         public override bool HandlesPersistRequests => true;
         public override bool HandlesApplyRequests => false;
