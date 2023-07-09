@@ -8,7 +8,7 @@ The highly optimized implementation makes it a solid foundation for ambitious fe
 
 ## Getting Started
 * Package Manual (coming soon)  
-* Demo Project (coming soon)  
+* [Demo Project](https://github.com/JonasDeM/QuickSaveDemo)  
 * Quick Setup Video (coming soon)  
 
 ## Potential Use Cases
