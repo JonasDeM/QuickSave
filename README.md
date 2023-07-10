@@ -7,9 +7,8 @@ This Unity DOTS-related package enables you to asynchronously load and save stat
 The highly optimized implementation makes it a solid foundation for ambitious features since it can easily run on every frame.
 
 ## Getting Started
-* Package Manual (coming soon)  
+* [Package Manual](PackageManual.md)
 * [Demo Project](https://github.com/JonasDeM/QuickSaveDemo)  
-* Quick Setup Video (coming soon)  
 
 ## Potential Use Cases
 Depending on what state you choose to save, anything is possible.  
