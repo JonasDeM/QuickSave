@@ -53,7 +53,7 @@ namespace QuickSave
                 // this will trigger the actual unload
                 var ecbSystem = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>();
                 EntityCommandBuffer ecb = ecbSystem.CreateCommandBuffer(state.WorldUnmanaged);
-                ecb.RemoveComponent(_unloadRequests, _typesToRemoveForUnload);
+                ecb.RemoveComponent(_unloadRequests, _typesToRemoveForUnload, EntityQueryCaptureMode.AtPlayback);
             }
         }
         

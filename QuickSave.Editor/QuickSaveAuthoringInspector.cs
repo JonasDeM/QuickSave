@@ -38,7 +38,7 @@ namespace QuickSave.Editor
             // Handle missing settings asset
             if (_quickSaveSettingsAsset == null)
             {
-                if (GUILayout.Button("Create PersistencySettings", GUILayout.Height(50)))
+                if (GUILayout.Button("Create QuickSaveSettings", GUILayout.Height(50)))
                 {
                     QuickSaveSettingsAsset.CreateInEditor();
                     _quickSaveSettingsAsset = QuickSaveSettingsAsset.Get();
