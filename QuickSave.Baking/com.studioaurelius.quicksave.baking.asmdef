@@ -1,5 +1,5 @@
 {
-    "name": "io.jonasdem.quicksave.baking",
+    "name": "com.studioaurelius.quicksave.baking",
     "rootNamespace": "",
     "references": [
         "GUID:42697df707fc47a4aa81e8cf52f99bfe",

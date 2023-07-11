@@ -9,7 +9,7 @@ using UnityEngine;
 using Hash128 = Unity.Entities.Hash128;
 
 using System.Runtime.CompilerServices;
-[assembly:InternalsVisibleTo("io.jonasdem.quicksave.baking")]
+[assembly:InternalsVisibleTo("com.studioaurelius.quicksave.baking")]
 
 namespace QuickSave
 {

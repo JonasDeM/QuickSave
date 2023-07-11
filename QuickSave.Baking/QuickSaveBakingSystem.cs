@@ -10,8 +10,8 @@ using Debug = UnityEngine.Debug;
 using Hash128 = Unity.Entities.Hash128;
 // ReSharper disable AccessToDisposedClosure
 
-[assembly:InternalsVisibleTo("io.jonasdem.quicksave.editor")]
-[assembly:InternalsVisibleTo("io.jonasdem.quicksave.tests")]
+[assembly:InternalsVisibleTo("com.studioaurelius.quicksave.editor")]
+[assembly:InternalsVisibleTo("com.studioaurelius.quicksave.tests")]
 
 namespace QuickSave.Baking
 {

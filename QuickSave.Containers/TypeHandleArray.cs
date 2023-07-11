@@ -7,7 +7,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 
-[assembly:InternalsVisibleTo("io.jonasdem.quicksave")]
+[assembly:InternalsVisibleTo("com.studioaurelius.quicksave")]
 
 // This container is intentionally super specific.
 // It should only be used to get around the fact that NativeContainer doesn't want to hold DynamicTypeHandles.

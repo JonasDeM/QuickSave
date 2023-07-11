@@ -4,7 +4,10 @@ This repository comes with a restrictive [non-commercial license](LICENSE.MD).*
 
 ## In Short
 This Unity DOTS-related package enables you to asynchronously load and save state on entities without the need for any feature-specific code.  
-The highly optimized implementation makes it a solid foundation for ambitious features since it can easily run on every frame.
+The highly optimized implementation makes it a solid foundation for ambitious features since it can easily run on every frame.  
+
+
+This version of the package supports Entities 1.0.11, it will get updated as unity releases new versions of their Entities package.
 
 ## Getting Started
 * [Package Manual](PackageManual.md)

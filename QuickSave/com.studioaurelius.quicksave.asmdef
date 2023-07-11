@@ -1,5 +1,5 @@
 {
-    "name": "io.jonasdem.quicksave",
+    "name": "com.studioaurelius.quicksave",
     "rootNamespace": "",
     "references": [
         "GUID:e63a9f9b38516b1469a5055028a5560d",

@@ -12,8 +12,8 @@ using Unity.Transforms;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-[assembly:InternalsVisibleTo("io.jonasdem.quicksave.editor")]
-[assembly:InternalsVisibleTo("io.jonasdem.quicksave.tests")]
+[assembly:InternalsVisibleTo("com.studioaurelius.quicksave.editor")]
+[assembly:InternalsVisibleTo("com.studioaurelius.quicksave.tests")]
 
 namespace QuickSave
 {
