@@ -12,7 +12,7 @@ Add the QuickSaveAuthoring component to a gameobject in a SubScene and click the
 ### Defining what **CAN** get saved
 If the Initial Setup was followed there will now be 2 assets in the 'Assets/QuickSave/Resources/QuickSave' folder.  
 On the [QuickSaveSettingsAsset](QuickSave/QuickSaveSettingsAsset.cs) you will define every ECS component that you might want to save & load.  
-For BufferElementData you'll have to define the max amount of elements that can be saved.  
+For BufferElementData you'll also have to define the max amount of elements that can be saved.  
 On the [QuickSaveArchetypeCollection](QuickSave/QuickSaveArchetypeCollection.cs) asset you can optionally define named combinations of types.  
 These definitions are useful to reduce authoring work, add consistency and make later modifications easier.  
 
@@ -75,7 +75,7 @@ When QuickSave saves the state of your entities it copies the data to a single a
 It just looks at the SceneSection component on the entities to decide in which container the data ends up.
 
 
-QuickSave creates only 1 container automatically, the 'Initial Container', this is where the initial state of the subscene gets stored.
+Per SubScene, QuickSave creates only 1 container automatically, the 'Initial Container', this is where the initial state of the subscene gets stored.
 This gets done by the [QuickSaveSceneSystem](QuickSave/QuickSaveSceneSystem.cs) & [QuickSaveBeginFrameSystem](QuickSave/QuickSaveBeginFrameSystem.cs).
 
 A container is just an entity that stores all its data in a buffer component of type [QuickSaveDataContainer.Data](QuickSave/QuickSaveDataContainer.cs). 
@@ -85,11 +85,11 @@ It also has the [QuickSaveDataContainer](QuickSave/QuickSaveDataContainer.cs) co
 You can create new containers for a subscene simply by instantiating an existing valid container entity.
 When a subscene is loaded the first time, QuickSave automatically creates 1 valid container with the intial state of the subscene.
 So to create your first own container you'll need to duplicate/instantiate that entity. 
-The [QuickSaveAPI](QuickSave/QuickSaveAPI.cs) class has some handy methods to do this, they are mainly meant to guide the user, but feel free to work with the container entities directly.
-If you have the SceneSection, you can get the InitialContainer entity by checking its [QuickSaveSceneSection](QuickSave/QuickSaveSceneComponents.cs) component. 
+The [QuickSaveAPI](QuickSave/QuickSaveAPI.cs) class has some handy methods to do this, but feel free to work with the container entities directly.
+Getting the initial container for a subscene can be done by grabbing the [QuickSaveSceneSection](QuickSave/QuickSaveSceneComponents.cs) component on the SceneSection entity. 
 
 
-To apply the data from a container to the entities or to do the reverse you use the [DataTransferRequest](QuickSave/QuickSaveDataContainer.cs) component on a container.
+To apply the data from a container to the entities (or the reverse) you use the [DataTransferRequest](QuickSave/QuickSaveDataContainer.cs) component on a container.
 
 ## QuickSave Systems
 There are 2 default systems that will execute your [DataTransferRequest](QuickSave/QuickSaveDataContainer.cs): [QuickSaveBeginFrameSystem](QuickSave/QuickSaveBeginFrameSystem.cs) & [QuickSaveEndFrameSystem](QuickSave/QuickSaveEndFrameSystem.cs).  
@@ -103,8 +103,8 @@ You can use the Unity component RequestSceneLoaded on SceneSection entities just
 
 QuickSave does provide 2 handy components to simplify auto-saving & auto-loading of state.
 [AutoApplyOnLoad](QuickSave/QuickSaveSceneComponents.cs) & [AutoPersistOnUnload](QuickSave/QuickSaveSceneComponents.cs).  
-If you decide to use [AutoPersistOnUnload](QuickSave/QuickSaveSceneComponents.cs) you will need to unload your subscene by adding the [AutoPersistOnUnload](QuickSave/QuickSaveSceneComponents.cs) component.
-This is to give QuickSave time to save the state before the scene gets unloaded.
+If you decide to use [AutoPersistOnUnload](QuickSave/QuickSaveSceneComponents.cs) you will need to unload your subscene by adding the [RequestSceneUnloaded](QuickSave/QuickSaveSceneComponents.cs) component.
+This is to give QuickSave time to save the state before the scene gets unloaded. 
 
 ## Serialization
 QuickSave comes with serialization support, so you can write your containers to disk.
