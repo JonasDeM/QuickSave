@@ -47,7 +47,7 @@ Here are some ideas:
 The Package Manual helps with working with this limitation.  
 Support for this is technically possible, but would come with additional complexity & loss of performance.  
 * No support for quicksaving destruction/creation of entities. Use the 'Disabled' component & quicksave that.  
-The Package Manual explains how to make a constant-size pool for dynamically spawned prefabs.  
+The QuickSave Demo Project gives an example on how to implement a constant-size pool for dynamically spawnable prefabs.  
 Supporting variable-sized containers is being looked at, but not guaranteed to see the light of day.
 
 ## Goals for 2.0 release:
