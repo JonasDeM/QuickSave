@@ -22,6 +22,9 @@ namespace QuickSave.Tests
         protected World BakingWorld;
         protected EntityManager BakingEntityManager;
 
+        protected NativeList<BlobAssetReference<BlobArray<QuickSaveArchetypeDataLayout.TypeInfo>>> BlobAssetsToDisposeOnTearDown;
+        protected BlobAssetStore TestBlobAssetStore;
+
         [SetUp]
         public virtual void Setup()
         {
@@ -31,6 +34,8 @@ namespace QuickSave.Tests
             BakingWorld = new World("Test Baking World");
             BakingEntityManager = BakingWorld.EntityManager;
             QuickSaveSettings.Initialize();
+            BlobAssetsToDisposeOnTearDown = new NativeList<BlobAssetReference<BlobArray<QuickSaveArchetypeDataLayout.TypeInfo>>>(16, Allocator.Persistent);
+            TestBlobAssetStore = new BlobAssetStore(64);
         }
 
         [TearDown]
@@ -69,6 +74,13 @@ namespace QuickSave.Tests
                 Object.DestroyImmediate(rootGameObject);
             }
             QuickSaveSettings.CleanUp();
+            
+            for (int i = 0; i < BlobAssetsToDisposeOnTearDown.Length; i++)
+            {
+                BlobAssetsToDisposeOnTearDown[i].Dispose();
+            }
+            BlobAssetsToDisposeOnTearDown.Dispose();
+            TestBlobAssetStore.Dispose();
         }
         
         protected static QuickSaveSettingsAsset CreateTestSettings(bool groupedJobs = false, bool removeFirst = false, int maxBufferElements = -1)
@@ -108,7 +120,7 @@ namespace QuickSave.Tests
         }
         
         // Creates a 'fake' SceneInfoRef for single QuickSaveArchetype with a single Type T to track
-        internal QuickSaveSceneInfoRef CreateFakeSceneInfoRef<T>(Allocator allocator, int amountEntities) where T : unmanaged
+        internal QuickSaveSceneInfoRef CreateFakeSceneInfoRef<T>(int amountEntities) where T : unmanaged
         {
             var typeHandle = QuickSaveSettings.GetTypeHandleFromTypeIndex(ComponentType.ReadWrite<T>().TypeIndex);
             var typeHandleList = new NativeList<QuickSaveTypeHandle>(1, Allocator.Temp) {typeHandle};
@@ -122,7 +134,8 @@ namespace QuickSave.Tests
                 }
             };
             Hash128 sceneGUID = UnityEngine.Hash128.Compute(typeof(T).FullName);
-            return QuickSaveBakingSystem.CreateQuickSaveSceneInfoRef(allocator, new List<QuickSaveTypeHandle> {typeHandle}, creationInfoList, typeHandleList, sceneGUID, 0);
+            return QuickSaveBakingSystem.CreateQuickSaveSceneInfoRef(new List<QuickSaveTypeHandle> {typeHandle}, creationInfoList, typeHandleList,
+                sceneGUID, 0, TestBlobAssetStore);
         }
         
         [DisableAutoCreation]

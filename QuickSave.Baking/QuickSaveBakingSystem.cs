@@ -44,6 +44,12 @@ namespace QuickSave.Baking
 
         protected override void OnUpdate()
         {
+            BlobAssetStore blobAssetStore = World.GetExistingSystemManaged<BakingSystem>().BlobAssetStore;
+            Update(blobAssetStore);
+        }
+
+        internal void Update(BlobAssetStore blobAssetStore)
+        {
             QuickSaveSettings.Initialize(); // This needs to be here because we're in baking & it's not guaranteed to be initialized
 
             // Check for invalid entities
@@ -128,7 +134,8 @@ namespace QuickSave.Baking
                 }
 
                 // Create a single entity (per scene) that holds blob data which contains all the necessary info to be able to persist the whole subscene to a single container
-                CreateOrUpdateScenePersistencyInfoEntity(allUniqueTypeHandles, blobCreationInfoList, quickSaveTypeHandlesLookup, containerDataLayoutHashRef.Value, GetSceneGuid());
+                CreateOrUpdateScenePersistencyInfoEntity(allUniqueTypeHandles, blobCreationInfoList, quickSaveTypeHandlesLookup,
+                    containerDataLayoutHashRef.Value, GetSceneGuid(), blobAssetStore);
             }
             
             // Clean up
@@ -148,7 +155,8 @@ namespace QuickSave.Baking
         }
 
         private void CreateOrUpdateScenePersistencyInfoEntity(NativeHashSet<QuickSaveTypeHandle> allUniqueTypeHandles, 
-            NativeList<QuickSaveArchetypesInSceneCreationInfo> blobCreationInfoList, NativeList<QuickSaveTypeHandle> typeHandlesLookup, ulong dataLayoutHash, Hash128 sceneGUID)
+            NativeList<QuickSaveArchetypesInSceneCreationInfo> blobCreationInfoList, NativeList<QuickSaveTypeHandle> typeHandlesLookup, ulong dataLayoutHash,
+            Hash128 sceneGUID, BlobAssetStore blobAssetStore)
         {
             // GetOrCreate Setting Entity & set the right data
             // Create the entity that contains all the info the PersistentSceneSystem needs for initializing a loaded scene
@@ -166,10 +174,6 @@ namespace QuickSave.Baking
                 {
                     Debug.LogError($"{nameof(QuickSaveBakingSystem)} found more than 1 {nameof(QuickSaveSceneInfoRef)} entities, this indicates an invalid bake!");
                 }
-
-                var oldBlobAsset = EntityManager.GetComponentData<QuickSaveSceneInfoRef>(sceneInfoEntity).InfoRef;
-                if (oldBlobAsset.IsCreated)
-                    oldBlobAsset.Dispose();
             }
             List<QuickSaveTypeHandle> allUniqueTypeHandlesSorted = new List<QuickSaveTypeHandle>(allUniqueTypeHandles.Count);
             var hashSetEnumerator = allUniqueTypeHandles.GetEnumerator();
@@ -179,7 +183,8 @@ namespace QuickSave.Baking
             }
             allUniqueTypeHandlesSorted.Sort((left, right) => left.CompareTo(right));
 
-            var quickSaveSceneInfoRef = CreateQuickSaveSceneInfoRef(Allocator.Persistent, allUniqueTypeHandlesSorted, blobCreationInfoList, typeHandlesLookup, sceneGUID, dataLayoutHash);
+            QuickSaveSceneInfoRef quickSaveSceneInfoRef = CreateQuickSaveSceneInfoRef(allUniqueTypeHandlesSorted, blobCreationInfoList,
+                typeHandlesLookup, sceneGUID, dataLayoutHash, blobAssetStore);
             EntityManager.AddComponentData(sceneInfoEntity, quickSaveSceneInfoRef);
 
             Debug.Assert(sceneGUID != default);
@@ -191,8 +196,9 @@ namespace QuickSave.Baking
             }
         }
 
-        internal static QuickSaveSceneInfoRef CreateQuickSaveSceneInfoRef(Allocator allocator, List<QuickSaveTypeHandle> allUniqueTypeHandlesSorted, 
-            NativeList<QuickSaveArchetypesInSceneCreationInfo> blobCreationInfoList, NativeList<QuickSaveTypeHandle> typeHandlesLookup, Hash128 sceneGUID, ulong dataLayoutHash)
+        internal static QuickSaveSceneInfoRef CreateQuickSaveSceneInfoRef(List<QuickSaveTypeHandle> allUniqueTypeHandlesSorted, 
+            NativeList<QuickSaveArchetypesInSceneCreationInfo> blobCreationInfoList, NativeList<QuickSaveTypeHandle> typeHandlesLookup, Hash128 sceneGUID, ulong dataLayoutHash,
+            BlobAssetStore blobAssetStore)
         {
             QuickSaveSceneInfoRef quickSaveSceneInfoRef = new QuickSaveSceneInfoRef();
             using (BlobBuilder blobBuilder = new BlobBuilder(Allocator.Temp))
@@ -222,7 +228,9 @@ namespace QuickSave.Baking
                 quickSaveSceneInfo.SceneGUID = sceneGUID;
                 quickSaveSceneInfo.DataLayoutHash = dataLayoutHash;
 
-                quickSaveSceneInfoRef.InfoRef = blobBuilder.CreateBlobAssetReference<QuickSaveSceneInfo>(allocator);
+                BlobAssetReference<QuickSaveSceneInfo> blobAssetReference = blobBuilder.CreateBlobAssetReference<QuickSaveSceneInfo>(Allocator.Persistent);
+                blobAssetStore.TryAdd(ref blobAssetReference);
+                quickSaveSceneInfoRef.InfoRef = blobAssetReference;
             }
             return quickSaveSceneInfoRef;
         }

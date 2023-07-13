@@ -122,7 +122,10 @@ namespace QuickSave
         // Internal 
         // ********
         
-        internal static Entity CreateInitialSceneContainer(EntityManager entityManager, Hash128 guid, ref QuickSaveSceneInfo sceneInfo, out DynamicBuffer<QuickSaveDataContainer.Data> outBuffer)
+        // This method creates blob assets, ownership of them go to the caller of the method!
+        internal static Entity CreateInitialSceneContainer(EntityManager entityManager, Hash128 guid, ref QuickSaveSceneInfo sceneInfo, 
+            out DynamicBuffer<QuickSaveDataContainer.Data> outBuffer, 
+            NativeList<BlobAssetReference<BlobArray<QuickSaveArchetypeDataLayout.TypeInfo>>> blobAssetsOwnedByCaller)
         {
             var archetype = entityManager.CreateArchetype(InitializedContainerArchetype);
             Entity containerEntity = entityManager.CreateEntity(archetype);
@@ -134,6 +137,7 @@ namespace QuickSave
             int containerSize = 0;
             foreach (var layout in layouts)
             {
+                blobAssetsOwnedByCaller.Add(layout.TypeInfoArrayRef);
                 amountEntities += layout.Amount;
                 containerSize += layout.Amount * layout.SizePerEntity;
             }
@@ -153,8 +157,10 @@ namespace QuickSave
             return containerEntity;
         }
         
+        // This method creates blob assets, ownership of them go to the caller of the method!
         internal static Entity CreateInitialSceneContainer(EntityCommandBuffer ecb, Hash128 guid, ref QuickSaveSceneInfo sceneInfo, DataTransferRequest request,
-            out QuickSaveDataContainer container, out DynamicBuffer<QuickSaveDataContainer.Data> initialContainerData, out DynamicBuffer<QuickSaveArchetypeDataLayout> layouts)
+            out QuickSaveDataContainer container, out DynamicBuffer<QuickSaveDataContainer.Data> initialContainerData, out DynamicBuffer<QuickSaveArchetypeDataLayout> layouts,
+            NativeList<BlobAssetReference<BlobArray<QuickSaveArchetypeDataLayout.TypeInfo>>> blobAssetsOwnedByCaller)
         {
             Entity containerEntity = ecb.CreateEntity();
             layouts = ecb.AddBuffer<QuickSaveArchetypeDataLayout>(containerEntity);
@@ -163,6 +169,7 @@ namespace QuickSave
             int containerSize = 0;
             foreach (var layout in layouts)
             {
+                blobAssetsOwnedByCaller.Add(layout.TypeInfoArrayRef);
                 amountEntities += layout.Amount;
                 containerSize += layout.Amount * layout.SizePerEntity;
             }

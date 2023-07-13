@@ -28,7 +28,7 @@ namespace QuickSave.Tests
                 BakeForTests(tuple.Item1, BakingEntityManager, tuple.Item2, Hash128.Compute("TestBaking"), settingsAsset);
             }
             var bakingSystem = BakingWorld.GetOrCreateSystemManaged<QuickSaveBakingSystem>();
-            bakingSystem.Update();
+            bakingSystem.Update(TestBlobAssetStore);
 
             VerifyBakedEntities(toBake.Select((tuple) => tuple.Item1).ToList(), 1);
             BakingEntityManager.DestroyEntity(BakingEntityManager.UniversalQuery);
@@ -46,7 +46,7 @@ namespace QuickSave.Tests
                 BakeForTests(tuple.Item1, BakingEntityManager, tuple.Item2, Hash128.Compute("TestBaking"), settingsAsset);
             }
             var bakingSystem = BakingWorld.GetOrCreateSystemManaged<QuickSaveBakingSystem>();
-            bakingSystem.Update();
+            bakingSystem.Update(TestBlobAssetStore);
 
             VerifyBakedEntities(toBake.Select((tuple) => tuple.Item1).ToList(), 1);
             BakingEntityManager.DestroyEntity(BakingEntityManager.UniversalQuery);
@@ -64,7 +64,7 @@ namespace QuickSave.Tests
                 BakeForTests(tuple.Item1, BakingEntityManager, tuple.Item2, Hash128.Compute("TestBaking"), settingsAsset);
             }
             var bakingSystem = BakingWorld.GetOrCreateSystemManaged<QuickSaveBakingSystem>();
-            bakingSystem.Update();
+            bakingSystem.Update(TestBlobAssetStore);
 
             VerifyBakedEntities(toBake.Select((tuple) => tuple.Item1).ToList(), 1);
             
@@ -89,7 +89,7 @@ namespace QuickSave.Tests
                 BakeForTests(tuple.Item1, BakingEntityManager, tuple.Item2, Hash128.Compute("TestBaking"), settingsAsset);
             }
             var bakingSystem = BakingWorld.GetOrCreateSystemManaged<QuickSaveBakingSystem>();
-            bakingSystem.Update();
+            bakingSystem.Update(TestBlobAssetStore);
 
             VerifyBakedEntities(toBake.Select((tuple) => tuple.Item1).ToList(), total == 0 ? 1 : 6);
 
@@ -109,7 +109,7 @@ namespace QuickSave.Tests
                 BakeForTests(tuple.Item1, BakingEntityManager, tuple.Item2, Hash128.Compute("TestBaking"), settingsAsset);
             }
             var bakingSystem = BakingWorld.GetOrCreateSystemManaged<QuickSaveBakingSystem>();
-            bakingSystem.Update();
+            bakingSystem.Update(TestBlobAssetStore);
 
             VerifyBakedEntities(toBake.Select((tuple) => tuple.Item1).ToList(), 1);
             BakingEntityManager.DestroyEntity(BakingEntityManager.UniversalQuery);
@@ -414,7 +414,7 @@ namespace QuickSave.Tests
                 BakeForTests(tuple.Item1, BakingEntityManager, tuple.Item2, sceneGUID, settingsAsset);
             }
             var bakingSystem = BakingWorld.GetOrCreateSystemManaged<QuickSaveBakingSystem>();
-            bakingSystem.Update();
+            bakingSystem.Update(TestBlobAssetStore);
 
             VerifyBakedEntities(toBake.Select((tuple) => tuple.Item1).ToList(), 6);
             

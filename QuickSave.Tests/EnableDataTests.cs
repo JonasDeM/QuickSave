@@ -26,18 +26,24 @@ namespace QuickSave.Tests
             int entityAmount2 = entityAmount3 + (total%3 > 1 ? 1 : 0);
             const int maxBufferElements = 2;
             
-            var compDataInfoRef = CreateFakeSceneInfoRef<TestComponent>(Allocator.Temp, entityAmount1);
-            Entity compDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestComponent)), ref compDataInfoRef.InfoRef.Value, out _);
-            var compDataNonEnableInfoRef = CreateFakeSceneInfoRef<TestComponent>(Allocator.Temp, entityAmount1);
-            Entity compDataNonEnableContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsTestData)), ref compDataNonEnableInfoRef.InfoRef.Value, out _);
-            var tagDataInfoRef = CreateFakeSceneInfoRef<TestTagComponent>(Allocator.Temp, entityAmount2);
-            Entity tagDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestTagComponent)), ref tagDataInfoRef.InfoRef.Value, out _);
-            var tagDataNonEnableInfoRef = CreateFakeSceneInfoRef<EmptyEcsTestData>(Allocator.Temp, entityAmount2);
-            Entity tagDataNonEnableContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EmptyEcsTestData)), ref tagDataNonEnableInfoRef.InfoRef.Value, out _);
-            var bufferDataInfoRef = CreateFakeSceneInfoRef<TestBufferComponent>(Allocator.Temp, entityAmount2);
-            Entity bufferDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestBufferComponent)), ref bufferDataInfoRef.InfoRef.Value, out _);
-            var bufferDataNonEnableInfoRef = CreateFakeSceneInfoRef<DynamicBufferData1>(Allocator.Temp, entityAmount2);
-            Entity bufferDataNonEnableContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(DynamicBufferData1)), ref bufferDataNonEnableInfoRef.InfoRef.Value, out _);
+            var compDataInfoRef = CreateFakeSceneInfoRef<TestComponent>(entityAmount1);
+            Entity compDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestComponent)),
+                ref compDataInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
+            var compDataNonEnableInfoRef = CreateFakeSceneInfoRef<TestComponent>(entityAmount1);
+            Entity compDataNonEnableContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsTestData)),
+                ref compDataNonEnableInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
+            var tagDataInfoRef = CreateFakeSceneInfoRef<TestTagComponent>(entityAmount2);
+            Entity tagDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestTagComponent)),
+                ref tagDataInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
+            var tagDataNonEnableInfoRef = CreateFakeSceneInfoRef<EmptyEcsTestData>(entityAmount2);
+            Entity tagDataNonEnableContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EmptyEcsTestData)),
+                ref tagDataNonEnableInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
+            var bufferDataInfoRef = CreateFakeSceneInfoRef<TestBufferComponent>(entityAmount2);
+            Entity bufferDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestBufferComponent)),
+                ref bufferDataInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
+            var bufferDataNonEnableInfoRef = CreateFakeSceneInfoRef<DynamicBufferData1>(entityAmount2);
+            Entity bufferDataNonEnableContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(DynamicBufferData1)),
+                ref bufferDataNonEnableInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
 
             var query1 = new EntityQueryBuilder(Allocator.Temp).WithAll<TestComponent, LocalIndexInContainer>().Build(EntityManager);
             var query1NonEnable = new EntityQueryBuilder(Allocator.Temp).WithAll<EcsTestData, LocalIndexInContainer>().Build(EntityManager);
@@ -215,8 +221,9 @@ namespace QuickSave.Tests
             int entityAmount2 = entityAmount3 + (total%3 > 1 ? 1 : 0);
             const int maxBufferElements = 2;
 
-            var compDataInfoRef = CreateFakeSceneInfoRef<TestComponent>(Allocator.Temp, entityAmount1);
-            Entity compDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestComponent)), ref compDataInfoRef.InfoRef.Value, out var compData);
+            var compDataInfoRef = CreateFakeSceneInfoRef<TestComponent>(entityAmount1);
+            Entity compDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestComponent)),
+                ref compDataInfoRef.InfoRef.Value, out var compData, BlobAssetsToDisposeOnTearDown);
             var containerIdCompData = new SceneSection {SceneGUID = UnityEngine.Hash128.Compute(nameof(TestComponent))};
             for (int i = 0; i < entityAmount1; i++)
             {
@@ -226,8 +233,9 @@ namespace QuickSave.Tests
                 UnsafeUtility.WriteArrayElementWithStride(compData.GetUnsafePtr(), i, UnsafeUtility.SizeOf<TestComponent>() + QuickSaveMetaData.SizeOfStruct, metaData);
             }
             
-            var tagDataInfoRef = CreateFakeSceneInfoRef<TestTagComponent>(Allocator.Temp, entityAmount2);
-            Entity tagDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestTagComponent)), ref tagDataInfoRef.InfoRef.Value, out var tagData);
+            var tagDataInfoRef = CreateFakeSceneInfoRef<TestTagComponent>(entityAmount2);
+            Entity tagDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestTagComponent)),
+                ref tagDataInfoRef.InfoRef.Value, out var tagData, BlobAssetsToDisposeOnTearDown);
             var containerIdTagData = new SceneSection {SceneGUID = UnityEngine.Hash128.Compute(nameof(TestTagComponent))};
             for (int i = 0; i < entityAmount2; i++)
             {
@@ -237,8 +245,9 @@ namespace QuickSave.Tests
                 UnsafeUtility.WriteArrayElementWithStride(tagData.GetUnsafePtr(), i, 0 + QuickSaveMetaData.SizeOfStruct, metaData);
             }
             
-            var bufferDataInfoRef = CreateFakeSceneInfoRef<TestBufferComponent>(Allocator.Temp, entityAmount2);
-            Entity bufferDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestBufferComponent)), ref bufferDataInfoRef.InfoRef.Value, out var bufferData);
+            var bufferDataInfoRef = CreateFakeSceneInfoRef<TestBufferComponent>(entityAmount2);
+            Entity bufferDataContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(TestBufferComponent)),
+                ref bufferDataInfoRef.InfoRef.Value, out var bufferData, BlobAssetsToDisposeOnTearDown);
             var containerIdBufferData = new SceneSection {SceneGUID = UnityEngine.Hash128.Compute(nameof(TestBufferComponent))};
             for (int i = 0; i < entityAmount3; i++)
             {

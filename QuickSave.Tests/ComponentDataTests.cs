@@ -25,12 +25,15 @@ namespace QuickSave.Tests
             int entityAmount1 = entityAmount3 + (total%3 > 0 ? 1 : 0);
             int entityAmount2 = entityAmount3 + (total%3 > 1 ? 1 : 0);
 
-            var array1IntInfoRef = CreateFakeSceneInfoRef<EcsPersistingTestData>(Allocator.Temp, entityAmount1);
-            Entity array1IntContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingTestData)), ref array1IntInfoRef.InfoRef.Value, out _);
-            var array2FloatInfoRef = CreateFakeSceneInfoRef<EcsPersistingFloatTestData2>(Allocator.Temp, entityAmount2);
-            Entity array2FloatContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingFloatTestData2)), ref array2FloatInfoRef.InfoRef.Value, out _);
-            var array5IntInfoRef = CreateFakeSceneInfoRef<EcsPersistingTestData5>(Allocator.Temp, entityAmount3);
-            Entity array5IntContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingTestData5)), ref array5IntInfoRef.InfoRef.Value, out _);
+            var array1IntInfoRef = CreateFakeSceneInfoRef<EcsPersistingTestData>(entityAmount1);
+            Entity array1IntContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingTestData)),
+                ref array1IntInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
+            var array2FloatInfoRef = CreateFakeSceneInfoRef<EcsPersistingFloatTestData2>(entityAmount2);
+            Entity array2FloatContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingFloatTestData2)),
+                ref array2FloatInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
+            var array5IntInfoRef = CreateFakeSceneInfoRef<EcsPersistingTestData5>(entityAmount3);
+            Entity array5IntContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingTestData5)),
+                ref array5IntInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
 
             var query1 = EntityManager.CreateEntityQuery(typeof(EcsPersistingTestData), typeof(LocalIndexInContainer));
             var query2 = EntityManager.CreateEntityQuery(typeof(EcsPersistingFloatTestData2), typeof(LocalIndexInContainer));
@@ -166,12 +169,15 @@ namespace QuickSave.Tests
             int entityAmount1 = entityAmount3 + (total%3 > 0 ? 1 : 0);
             int entityAmount2 = entityAmount3 + (total%3 > 1 ? 1 : 0);
             
-            var array1IntInfoRef = CreateFakeSceneInfoRef<EcsPersistingTestData>(Allocator.Temp, entityAmount1);
-            Entity array1IntContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingTestData)), ref array1IntInfoRef.InfoRef.Value, out _);
-            var array2FloatInfoRef = CreateFakeSceneInfoRef<EcsPersistingFloatTestData2>(Allocator.Temp, entityAmount2);
-            Entity array2FloatContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingFloatTestData2)), ref array2FloatInfoRef.InfoRef.Value, out _);
-            var array5IntInfoRef = CreateFakeSceneInfoRef<EcsPersistingTestData5>(Allocator.Temp, entityAmount3);
-            Entity array5IntContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingTestData5)), ref array5IntInfoRef.InfoRef.Value, out _);
+            var array1IntInfoRef = CreateFakeSceneInfoRef<EcsPersistingTestData>(entityAmount1);
+            Entity array1IntContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingTestData)), 
+                ref array1IntInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
+            var array2FloatInfoRef = CreateFakeSceneInfoRef<EcsPersistingFloatTestData2>(entityAmount2);
+            Entity array2FloatContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingFloatTestData2)), 
+                ref array2FloatInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
+            var array5IntInfoRef = CreateFakeSceneInfoRef<EcsPersistingTestData5>(entityAmount3);
+            Entity array5IntContainer = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EcsPersistingTestData5)), 
+                ref array5IntInfoRef.InfoRef.Value, out _, BlobAssetsToDisposeOnTearDown);
 
             var query1 = EntityManager.CreateEntityQuery(typeof(EcsPersistingTestData), typeof(LocalIndexInContainer));
             var query2 = EntityManager.CreateEntityQuery(typeof(EcsPersistingFloatTestData2), typeof(LocalIndexInContainer));
@@ -376,8 +382,9 @@ namespace QuickSave.Tests
             
             var query = EntityManager.CreateEntityQuery(typeof(LocalIndexInContainer));
             
-            var infoRef = CreateFakeSceneInfoRef<EmptyEcsTestData>(Allocator.Temp, 3);
-            Entity container = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EmptyEcsTestData)), ref infoRef.InfoRef.Value, out var data);
+            var infoRef = CreateFakeSceneInfoRef<EmptyEcsTestData>(3);
+            Entity container = QuickSaveAPI.CreateInitialSceneContainer(EntityManager, UnityEngine.Hash128.Compute(nameof(EmptyEcsTestData)),
+                ref infoRef.InfoRef.Value, out var data, BlobAssetsToDisposeOnTearDown);
             var bufferLookUpSystem = World.GetOrCreateSystemManaged<TestSystem>();
             
             // Action

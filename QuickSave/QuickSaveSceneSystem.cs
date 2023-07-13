@@ -26,6 +26,8 @@ namespace QuickSave
         private BufferLookup<QuickSaveDataContainer.Data> _dataLookup;
         private BufferLookup<QuickSaveArchetypeDataLayout> _dataLayoutLookup;
         private BufferLookup<DataTransferRequest> _dataTransferRequestLookup;
+        
+        private NativeList<BlobAssetReference<BlobArray<QuickSaveArchetypeDataLayout.TypeInfo>>> _ownedBlobAssets;
 
         public void OnCreate(ref SystemState state)
         {
@@ -47,6 +49,8 @@ namespace QuickSave
             _dataLookup = state.GetBufferLookup<QuickSaveDataContainer.Data>();
             _dataLayoutLookup = state.GetBufferLookup<QuickSaveArchetypeDataLayout>();
             _dataTransferRequestLookup = state.GetBufferLookup<DataTransferRequest>();
+            
+            _ownedBlobAssets = new NativeList<BlobAssetReference<BlobArray<QuickSaveArchetypeDataLayout.TypeInfo>>>(256, Allocator.Persistent);
             
             // Create some archetypes at the start to avoid the cost at runtime
             CacheArchetypes(ref state);
@@ -80,6 +84,7 @@ namespace QuickSave
             {
                 InfoMap = _tempNewSceneSections,
                 Ecb = ecb,
+                OwnedBlobAssetsToAppendTo = _ownedBlobAssets,
                 ExecutingRequestsSystem = _executingSystemHandle,
                 QuickSaveSceneSectionLookup = _quickSaveSceneSectionLookup,
                 AutoApplyOnLoadLookup = _autoApplyOnLoadLookup,
@@ -96,6 +101,11 @@ namespace QuickSave
         public void OnDestroy(ref SystemState state)
         {
             _tempNewSceneSections.Dispose();
+            for (int i = 0; i < _ownedBlobAssets.Length; i++)
+            {
+                _ownedBlobAssets[i].Dispose();
+            }
+            _ownedBlobAssets.Dispose();
             QuickSaveSettings.CleanUp();
         }
 
@@ -138,6 +148,8 @@ namespace QuickSave
             [ReadOnly]
             public NativeHashMap<SceneSection, QuickSaveSceneInfoRef> InfoMap;
             public EntityCommandBuffer Ecb;
+
+            public NativeList<BlobAssetReference<BlobArray<QuickSaveArchetypeDataLayout.TypeInfo>>> OwnedBlobAssetsToAppendTo;
             
             public SystemHandle ExecutingRequestsSystem;
 
@@ -178,8 +190,9 @@ namespace QuickSave
                         ExecutingSystem = ExecutingRequestsSystem,
                         RequestType = DataTransferRequest.Type.FromEntitiesToDataContainer
                     };
-                    initialContainerEntity = QuickSaveAPI.CreateInitialSceneContainer(Ecb, containerIdentifier, ref sceneInfo, initialRequest, out initialContainer, out initialContainerData, out initialDataLayouts);
-
+                    initialContainerEntity = QuickSaveAPI.CreateInitialSceneContainer(Ecb, containerIdentifier, ref sceneInfo, initialRequest, 
+                        out initialContainer, out initialContainerData, out initialDataLayouts, OwnedBlobAssetsToAppendTo);
+                    
                     Ecb.AddComponent(sceneSectionEntity, new QuickSaveSceneSection {InitialStateContainerEntity = initialContainerEntity});
                 }
 
