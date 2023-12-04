@@ -1,5 +1,5 @@
 ![quicksavebanner](https://user-images.githubusercontent.com/23634827/218306750-7084d9a7-b36d-42c8-872b-dc86b690cfb5.png)
-*For any commercial work you can buy the asset on the Unity Asset Store. (coming soon)  
+*For any commercial work you can buy the asset on the Unity Asset Store [here](https://assetstore.unity.com/packages/tools/utilities/quicksave-state-saving-for-dots-246695).
 This repository comes with a restrictive [non-commercial license](LICENSE.MD).*
 
 ## In Short
